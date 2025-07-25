@@ -77,11 +77,8 @@ public class PrisonTycoonHook {
 
     // === GESTION DES PERMISSIONS ===
 
-    /**
-     * Vérifie si un joueur peut créer une île gratuitement
-     */
-    public boolean canCreateIsland(Player player) {
-        return prisonAPI.hasCustomPermission(player.getUniqueId(), "specialmine.free");
+    public boolean hasCustomPermission (Player player, String permission) {
+        return prisonAPI.hasPermission(player, permission);
     }
 
     // === GESTION DE L'AGRANDISSEMENT (BEACONS) ===
@@ -163,33 +160,38 @@ public class PrisonTycoonHook {
         }
     }
 
-    // === RÉCOMPENSES ===
+    // === Adder ==
 
-    /**
-     * Récompense un joueur avec des coins
-     */
-    public void rewardCoins(Player player, long amount, String reason) {
-        if (prisonAPI.addCoins(player, amount)) {
-            player.sendMessage("§aVous avez reçu §6" + amount + " coins §a! (" + reason + ")");
-        }
+    public boolean addCoins(UUID playerId, long amount) {
+        return prisonAPI.addCoins(playerId, amount);
     }
 
-    /**
-     * Récompense un joueur avec des tokens
-     */
-    public void rewardTokens(Player player, long amount, String reason) {
-        if (prisonAPI.addTokens(player, amount)) {
-            player.sendMessage("§aVous avez reçu §d" + amount + " tokens §a! (" + reason + ")");
-        }
+    public boolean addTokens(UUID playerId, long amount) {
+        return prisonAPI.addTokens(playerId, amount);
     }
 
-    /**
-     * Récompense un joueur avec des beacons
-     */
-    public void rewardBeacons(Player player, long amount, String reason) {
-        if (prisonAPI.addBeacons(player, amount)) {
-            player.sendMessage("§aVous avez reçu §b" + amount + " beacons §a! (" + reason + ")");
-        }
+    public boolean addExperience(UUID playerId, long amount) {
+        return prisonAPI.addExperience(playerId, amount);
+    }
+
+    public boolean addBeacons(UUID playerId, long amount) {
+        return prisonAPI.addBeacons(playerId, amount);
+    }
+
+    public boolean removeCoins(UUID playerId, long amount) {
+        return prisonAPI.removeCoins(playerId, amount);
+    }
+
+    public boolean removeTokens(UUID playerId, long amount) {
+        return prisonAPI.removeTokens(playerId, amount);
+    }
+
+    public boolean removeExperience(UUID playerId, long amount) {
+        return prisonAPI.removeExperience(playerId, amount);
+    }
+
+    public boolean removeBeacons(UUID playerId, long amount) {
+        return prisonAPI.removeBeacons(playerId, amount);
     }
 
     // === MÉTHODES DE VÉRIFICATION ===

@@ -79,7 +79,7 @@ public class IslandCommand implements CommandExecutor, TabCompleter {
     }
 
     private void handleCreate(Player player) {
-        if (!plugin.getPrisonTycoonHook().canCreateIsland(player)) {
+        if (!plugin.getPrisonTycoonHook().hasCustomPermission(player, "specialmine.free")) {
             player.sendMessage(ChatColor.RED + "Vous devez débloquer Free pour créer une île");
             return;
         }

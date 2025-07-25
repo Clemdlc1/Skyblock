@@ -50,7 +50,7 @@ public class EconomyManager {
     }
 
     public void addBalance(UUID playerUuid, double amount) {
-        plugin.getPrisonTycoonHook().rewardCoins(plugin.getServer().getPlayer(playerUuid), Math.round(amount), "Ajout de balance");
+        plugin.getPrisonTycoonHook().addCoins(playerUuid, Math.round(amount));
     }
 
     public boolean removeBalance(UUID playerUuid, double amount) {
@@ -112,10 +112,9 @@ public class EconomyManager {
     // === SYSTÈME DE RÉCOMPENSES ===
 
     public void rewardPlayer(UUID playerUuid, double amount, String reason) {
-        // Utiliser PrisonTycoon si disponible
         Player player = plugin.getServer().getPlayer(playerUuid);
         if (player != null) {
-            plugin.getPrisonTycoonHook().rewardCoins(player, Math.round(amount), reason);
+            plugin.getPrisonTycoonHook().addCoins(player.getUniqueId(), Math.round(amount));
         } else {
             plugin.getLogger().info("Joueur " + playerUuid + " aurait reçu " + amount + "$ pour: " + reason);
         }
@@ -160,7 +159,6 @@ public class EconomyManager {
     }
 
     public boolean transferMoney(UUID fromPlayer, UUID toPlayer, double amount) {
-        // Utiliser PrisonTycoon si disponible
         return plugin.getPrisonTycoonHook().transferCoins(fromPlayer, toPlayer, Math.round(amount));
     }
 
@@ -340,7 +338,6 @@ public class EconomyManager {
     // === COMMANDES D'ÉCONOMIE ===
 
     public void handleBalanceCommand(Player player) {
-        // Utiliser PrisonTycoon si disponible
         plugin.getPrisonTycoonHook().showPlayerEconomy(player);
     }
 

@@ -2,6 +2,7 @@ package fr.skyblock;
 
 import fr.skyblock.commands.IslandCommand;
 import fr.skyblock.commands.IslandAdminCommand;
+import fr.skyblock.listeners.MenuListener;
 import fr.skyblock.listeners.PlayerListener;
 import fr.skyblock.listeners.IslandListener;
 import fr.skyblock.managers.*;
@@ -21,6 +22,7 @@ public final class CustomSkyblock extends JavaPlugin {
     private SchematicManager schematicManager;
     private InvitationManager invitationManager;
     private TaskManager taskManager;
+    private WarpManager warpManager;
     private MultiverseCoreApi multiverseCoreApi;
     private PrisonTycoonHook prisonTycoonHook;
 
@@ -45,7 +47,9 @@ public final class CustomSkyblock extends JavaPlugin {
         this.invitationManager = new InvitationManager(this);
         this.islandManager = new IslandManager(this);
         this.menuManager = new MenuManager(this);
+        this.warpManager = new WarpManager(this);
         this.prisonTycoonHook = new PrisonTycoonHook(this);
+
 
         // Vérification de Multiverse Core
         if (!setupMultiverse()) {
@@ -68,6 +72,8 @@ public final class CustomSkyblock extends JavaPlugin {
         // Enregistrement des listeners
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new IslandListener(this), this);
+        getServer().getPluginManager().registerEvents(new MenuListener(this), this);
+
 
         // Démarrer les tâches périodiques
         this.taskManager = new TaskManager(this);
@@ -145,6 +151,10 @@ public final class CustomSkyblock extends JavaPlugin {
 
     public TaskManager getTaskManager() {
         return taskManager;
+    }
+
+    public WarpManager getWarpManager() {
+        return warpManager;
     }
 
     public MultiverseCoreApi getMultiverseCoreApi() {
