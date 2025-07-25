@@ -1,0 +1,152 @@
+# Configuration du plugin CustomSkyblock
+# Redémarrage requis après modification
+
+# Configuration des îles
+island:
+  # Taille par défaut des nouvelles îles
+  default-size: 50
+
+  # Taille maximale autorisée pour les îles
+  max-size: 200
+
+  # Hauteur à laquelle les îles sont générées
+  height: 64
+
+  # Protection automatique des îles
+  auto-protection: true
+
+  # Préfixe des mondes d'îles
+  world-prefix: "island_"
+
+  # Flags par défaut pour les nouvelles îles
+  default-flags:
+    pvp: false
+    mob-spawning: true
+    animal-spawning: true
+    fire-spread: false
+    explosion-damage: false
+    visitor-interact: false
+    visitor-place: false
+    visitor-break: false
+    visitor-chest: false
+
+# Configuration de l'économie
+economy:
+  # Argent de départ pour les nouveaux joueurs (si PrisonTycoon non disponible)
+  starting-money: 50.0
+
+  # Bonus de première connexion
+  first-join-bonus: 50.0
+
+  # Récompense pour la création d'île (si PrisonTycoon non disponible)
+  island-creation-reward: 100.0
+
+  # Revenus passifs des îles (activé/désactivé)
+  passive-income: true
+
+  # Intervalle de revenus passifs (en minutes)
+  income-interval: 60
+
+  # Multiplicateur de revenus basé sur le niveau
+  income-multiplier: 0.5
+
+# Configuration PrisonTycoon (si disponible)
+prison-tycoon:
+  # Coût en coins pour créer une île (si pas de permission specialmine.free)
+  island-creation-cost: 100
+
+  # Coût en beacons par niveau d'agrandissement
+  beacon-cost-per-size: 10
+
+  # Coût en coins par niveau d'amélioration
+  coins-cost-per-level: 1000
+
+  # Récompenses de création d'île
+  creation-rewards:
+    tokens: 10
+    beacons: 5
+
+  # Messages d'économie
+  messages:
+    no-permission: "&cVous devez avoir la permission &bspecialmine.free &cou assez de ressources !"
+    not-enough-coins: "&cVous n'avez pas assez de coins ! (Requis: %cost%)"
+    not-enough-beacons: "&cVous n'avez pas assez de beacons ! (Requis: %cost%)"
+    expansion-success: "&aÎle agrandie ! Coût: &b%cost% beacons"
+    upgrade-success: "&aÎle améliorée ! Coût: &6%cost% coins"
+
+# Configuration des invitations
+invitations:
+  # Durée d'expiration des invitations (en minutes)
+  expiration-time: 5
+
+  # Nombre maximum d'invitations simultanées par joueur
+  max-pending: 10
+
+# Configuration des schématics
+schematics:
+  # Schématic par défaut pour les nouvelles îles
+  default: "classic"
+
+  # Permettre aux joueurs de choisir leur schématic
+  allow-selection: true
+
+# Configuration des performances
+performance:
+  # Sauvegarde automatique (en minutes)
+  auto-save-interval: 30
+
+  # Nettoyage automatique des invitations expirées (en minutes)
+  cleanup-interval: 5
+
+  # Limite de world border par défaut
+  world-border-enabled: true
+
+# Configuration des messages
+messages:
+  # Préfixe des messages du plugin
+  prefix: "&8[&bSkyblock&8]&r "
+
+  # Messages de bienvenue
+  welcome:
+    new-player: true
+    show-commands: true
+
+  # Notifications
+  notifications:
+    island-activity: true
+    member-join-leave: true
+    invitations: true
+
+# Configuration de debug
+debug:
+  # Mode debug activé
+  enabled: false
+
+  # Niveau de log (INFO, WARNING, SEVERE)
+  log-level: "INFO"
+
+  # Logs détaillés pour l'économie
+  economy-logs: false
+
+  # Logs détaillés pour les îles
+  island-logs: false
+
+# Configuration avancée
+advanced:
+  # Vérification de la version de Multiverse
+  check-multiverse-version: true
+
+  # Générateur de monde vide à utiliser
+  void-generator: "VoidWorldGenerator"
+
+  # Limite de membres par île
+  max-members-per-island: 10
+
+  # Permettre plusieurs îles par joueur
+  allow-multiple-islands: false
+
+  # Suppression automatique des mondes d'îles supprimées
+  auto-delete-island-worlds: true
+
+  # Nettoyage automatique des mondes orphelins au démarrage
+  cleanup-orphaned-worlds: true
