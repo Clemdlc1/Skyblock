@@ -54,24 +54,11 @@ public class EconomyManager {
     }
 
     public boolean removeBalance(UUID playerUuid, double amount) {
-        if (plugin.getPrisonTycoonHook().isEnabled()) {
-            return plugin.getPrisonTycoonHook().hasCoins(playerUuid, Math.round(amount));
-        }
-
-        double current = getBalance(playerUuid);
-        if (current >= amount) {
-            setBalance(playerUuid, current - amount);
-            return true;
-        }
-        return false;
+        return plugin.getPrisonTycoonHook().hasCoins(playerUuid, Math.round(amount));
     }
 
     public boolean hasBalance(UUID playerUuid, double amount) {
-        if (plugin.getPrisonTycoonHook().isEnabled()) {
-            return plugin.getPrisonTycoonHook().hasCoins(playerUuid, Math.round(amount));
-        }
-
-        return getBalance(playerUuid) >= amount;
+        return plugin.getPrisonTycoonHook().hasCoins(playerUuid, Math.round(amount));
     }
 
     // === GESTION DES TRANSACTIONS BANCAIRES ===
@@ -126,25 +113,12 @@ public class EconomyManager {
 
     public void rewardPlayer(UUID playerUuid, double amount, String reason) {
         // Utiliser PrisonTycoon si disponible
-        if (plugin.getPrisonTycoonHook().isEnabled()) {
-            Player player = plugin.getServer().getPlayer(playerUuid);
-            if (player != null) {
-                plugin.getPrisonTycoonHook().rewardCoins(player, Math.round(amount), reason);
-            } else {
-                plugin.getLogger().info("Joueur " + playerUuid + " aurait reçu " + amount + "$ pour: " + reason);
-            }
-            return;
-        }
-
-        addBalance(playerUuid, amount);
-
         Player player = plugin.getServer().getPlayer(playerUuid);
-        if (player != null && player.isOnline()) {
-            player.sendMessage(ChatColor.GREEN + "Vous avez reçu " + ChatColor.GOLD + String.format("%.2f $", amount) +
-                    ChatColor.GREEN + " ! Raison: " + ChatColor.WHITE + reason);
+        if (player != null) {
+            plugin.getPrisonTycoonHook().rewardCoins(player, Math.round(amount), reason);
+        } else {
+            plugin.getLogger().info("Joueur " + playerUuid + " aurait reçu " + amount + "$ pour: " + reason);
         }
-
-        plugin.getLogger().info("Joueur " + playerUuid + " a reçu " + amount + "$ pour: " + reason);
     }
 
     public void rewardIsland(Island island, double amount, String reason) {
@@ -187,31 +161,7 @@ public class EconomyManager {
 
     public boolean transferMoney(UUID fromPlayer, UUID toPlayer, double amount) {
         // Utiliser PrisonTycoon si disponible
-        if (plugin.getPrisonTycoonHook().isEnabled()) {
-            return plugin.getPrisonTycoonHook().transferCoins(fromPlayer, toPlayer, Math.round(amount));
-        }
-
-        if (!hasBalance(fromPlayer, amount)) {
-            return false;
-        }
-
-        removeBalance(fromPlayer, amount);
-        addBalance(toPlayer, amount);
-
-        Player from = plugin.getServer().getPlayer(fromPlayer);
-        Player to = plugin.getServer().getPlayer(toPlayer);
-
-        if (from != null && from.isOnline()) {
-            from.sendMessage(ChatColor.YELLOW + "Vous avez envoyé " + ChatColor.GOLD + String.format("%.2f $", amount) +
-                    ChatColor.YELLOW + " à " + ChatColor.WHITE + (to != null ? to.getName() : "un joueur"));
-        }
-
-        if (to != null && to.isOnline()) {
-            to.sendMessage(ChatColor.GREEN + "Vous avez reçu " + ChatColor.GOLD + String.format("%.2f $", amount) +
-                    ChatColor.GREEN + " de " + ChatColor.WHITE + (from != null ? from.getName() : "un joueur"));
-        }
-
-        return true;
+        return plugin.getPrisonTycoonHook().transferCoins(fromPlayer, toPlayer, Math.round(amount));
     }
 
     // === SYSTÈME DE SALAIRE PASSIF ===
@@ -391,13 +341,7 @@ public class EconomyManager {
 
     public void handleBalanceCommand(Player player) {
         // Utiliser PrisonTycoon si disponible
-        if (plugin.getPrisonTycoonHook().isEnabled()) {
-            plugin.getPrisonTycoonHook().showPlayerEconomy(player);
-            return;
-        }
-
-        double balance = getBalance(player.getUniqueId());
-        player.sendMessage(ChatColor.GOLD + "Votre solde: " + ChatColor.WHITE + formatMoney(balance));
+        plugin.getPrisonTycoonHook().showPlayerEconomy(player);
     }
 
     public void handlePayCommand(Player player, String[] args) {

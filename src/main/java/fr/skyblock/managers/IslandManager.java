@@ -157,19 +157,17 @@ public class IslandManager {
         }
 
         // Vérifier et charger le coût avec PrisonTycoon
-        if (plugin.getPrisonTycoonHook().isEnabled()) {
-            Player owner = Bukkit.getPlayer(island.getOwner());
-            if (owner == null) {
-                return false; // Le propriétaire doit être en ligne pour payer
-            }
+        Player owner = Bukkit.getPlayer(island.getOwner());
+        if (owner == null) {
+            return false; // Le propriétaire doit être en ligne pour payer
+        }
 
-            if (!plugin.getPrisonTycoonHook().canExpandIsland(owner.getUniqueId(), island.getSize(), newSize)) {
-                return false; // Pas assez de beacons
-            }
+        if (!plugin.getPrisonTycoonHook().canExpandIsland(owner.getUniqueId(), island.getSize(), newSize)) {
+            return false; // Pas assez de beacons
+        }
 
-            if (!plugin.getPrisonTycoonHook().chargeExpandIsland(owner, island.getSize(), newSize)) {
-                return false; // Échec du paiement
-            }
+        if (!plugin.getPrisonTycoonHook().chargeExpandIsland(owner, island.getSize(), newSize)) {
+            return false; // Échec du paiement
         }
 
         island.setSize(newSize);
@@ -198,19 +196,17 @@ public class IslandManager {
         }
 
         // Vérifier et charger le coût avec PrisonTycoon
-        if (plugin.getPrisonTycoonHook().isEnabled()) {
-            Player owner = Bukkit.getPlayer(island.getOwner());
-            if (owner == null) {
-                return false; // Le propriétaire doit être en ligne pour payer
-            }
+        Player owner = Bukkit.getPlayer(island.getOwner());
+        if (owner == null) {
+            return false; // Le propriétaire doit être en ligne pour payer
+        }
 
-            if (!plugin.getPrisonTycoonHook().canUpgradeLevel(owner.getUniqueId(), island.getLevel(), newLevel)) {
-                return false; // Pas assez de coins
-            }
+        if (!plugin.getPrisonTycoonHook().canUpgradeLevel(owner.getUniqueId(), island.getLevel(), newLevel)) {
+            return false; // Pas assez de coins
+        }
 
-            if (!plugin.getPrisonTycoonHook().chargeLevelUpgrade(owner, island.getLevel(), newLevel)) {
-                return false; // Échec du paiement
-            }
+        if (!plugin.getPrisonTycoonHook().chargeLevelUpgrade(owner, island.getLevel(), newLevel)) {
+            return false; // Échec du paiement
         }
 
         island.setLevel(newLevel);

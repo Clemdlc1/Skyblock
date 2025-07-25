@@ -54,6 +54,13 @@ public final class CustomSkyblock extends JavaPlugin {
             return;
         }
 
+        // Vérification du hook PrisonTycoon
+        if (!prisonTycoonHook.isEnabled()) {
+            getLogger().severe("Hook PrisonTycoon non activé ! Le plugin se désactive.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
         // Enregistrement des commandes
         getCommand("island").setExecutor(new IslandCommand(this));
         getCommand("isadmin").setExecutor(new IslandAdminCommand(this));

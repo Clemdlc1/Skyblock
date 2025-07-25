@@ -90,10 +90,6 @@ public class PrisonTycoonHook {
      * Calcule le coût en beacons pour agrandir une île
      */
     public long calculateExpandCost(int currentSize, int newSize) {
-        if (!isEnabled()) {
-            return 0; // Gratuit si pas de hook
-        }
-
         // Coût progressif basé sur la différence de taille
         int sizeDifference = (newSize - currentSize) / 25; // Par palier de 25 blocs
         return baseExpandCost * sizeDifference * (sizeDifference + 1) / 2; // Coût progressif
@@ -103,10 +99,6 @@ public class PrisonTycoonHook {
      * Vérifie si un joueur peut agrandir son île
      */
     public boolean canExpandIsland(UUID playerId, int currentSize, int newSize) {
-        if (!isEnabled()) {
-            return true; // Gratuit si pas de hook
-        }
-
         long cost = calculateExpandCost(currentSize, newSize);
         return hasBeacons(playerId, cost);
     }
@@ -115,10 +107,6 @@ public class PrisonTycoonHook {
      * Charge le coût d'agrandissement d'une île
      */
     public boolean chargeExpandIsland(Player player, int currentSize, int newSize) {
-        if (!isEnabled()) {
-            return true; // Gratuit si pas de hook
-        }
-
         long cost = calculateExpandCost(currentSize, newSize);
 
         if (cost == 0) {
@@ -140,10 +128,6 @@ public class PrisonTycoonHook {
      * Calcule le coût en coins pour améliorer le niveau d'une île
      */
     public long calculateLevelUpgradeCost(int currentLevel, int newLevel) {
-        if (!isEnabled()) {
-            return 0; // Gratuit si pas de hook
-        }
-
         // Coût exponentiel pour les niveaux
         long totalCost = 0;
         for (int level = currentLevel + 1; level <= newLevel; level++) {
@@ -156,10 +140,6 @@ public class PrisonTycoonHook {
      * Vérifie si un joueur peut améliorer le niveau de son île
      */
     public boolean canUpgradeLevel(UUID playerId, int currentLevel, int newLevel) {
-        if (!isEnabled()) {
-            return true; // Gratuit si pas de hook
-        }
-
         long cost = calculateLevelUpgradeCost(currentLevel, newLevel);
         return hasCoins(playerId, cost);
     }
@@ -168,10 +148,6 @@ public class PrisonTycoonHook {
      * Charge le coût d'amélioration de niveau d'une île
      */
     public boolean chargeLevelUpgrade(Player player, int currentLevel, int newLevel) {
-        if (!isEnabled()) {
-            return true; // Gratuit si pas de hook
-        }
-
         long cost = calculateLevelUpgradeCost(currentLevel, newLevel);
 
         if (cost == 0) {
@@ -193,11 +169,6 @@ public class PrisonTycoonHook {
      * Récompense un joueur avec des coins
      */
     public void rewardCoins(Player player, long amount, String reason) {
-        if (!isEnabled()) {
-            player.sendMessage("§aVous auriez reçu §6" + amount + " coins §a(" + reason + ")");
-            return;
-        }
-
         if (prisonAPI.addCoins(player, amount)) {
             player.sendMessage("§aVous avez reçu §6" + amount + " coins §a! (" + reason + ")");
         }
@@ -207,11 +178,6 @@ public class PrisonTycoonHook {
      * Récompense un joueur avec des tokens
      */
     public void rewardTokens(Player player, long amount, String reason) {
-        if (!isEnabled()) {
-            player.sendMessage("§aVous auriez reçu §d" + amount + " tokens §a(" + reason + ")");
-            return;
-        }
-
         if (prisonAPI.addTokens(player, amount)) {
             player.sendMessage("§aVous avez reçu §d" + amount + " tokens §a! (" + reason + ")");
         }
@@ -221,11 +187,6 @@ public class PrisonTycoonHook {
      * Récompense un joueur avec des beacons
      */
     public void rewardBeacons(Player player, long amount, String reason) {
-        if (!isEnabled()) {
-            player.sendMessage("§aVous auriez reçu §b" + amount + " beacons §a(" + reason + ")");
-            return;
-        }
-
         if (prisonAPI.addBeacons(player, amount)) {
             player.sendMessage("§aVous avez reçu §b" + amount + " beacons §a! (" + reason + ")");
         }
@@ -234,15 +195,15 @@ public class PrisonTycoonHook {
     // === MÉTHODES DE VÉRIFICATION ===
 
     public boolean hasCoins(UUID playerId, long amount) {
-        return !isEnabled() || prisonAPI.hasCoins(playerId, amount);
+        return prisonAPI.hasCoins(playerId, amount);
     }
 
     public boolean hasTokens(UUID playerId, long amount) {
-        return !isEnabled() || prisonAPI.hasTokens(playerId, amount);
+        return prisonAPI.hasTokens(playerId, amount);
     }
 
     public boolean hasBeacons(UUID playerId, long amount) {
-        return !isEnabled() || prisonAPI.hasBeacons(playerId, amount);
+        return prisonAPI.hasBeacons(playerId, amount);
     }
 
     public long getCoins(UUID playerId) {
@@ -260,11 +221,11 @@ public class PrisonTycoonHook {
     // === TRANSFERTS ===
 
     public boolean transferCoins(UUID fromPlayer, UUID toPlayer, long amount) {
-        return !isEnabled() || prisonAPI.transferCoins(fromPlayer, toPlayer, amount);
+        return prisonAPI.transferCoins(fromPlayer, toPlayer, amount);
     }
 
     public boolean transferTokens(UUID fromPlayer, UUID toPlayer, long amount) {
-        return !isEnabled() || prisonAPI.transferTokens(fromPlayer, toPlayer, amount);
+        return prisonAPI.transferTokens(fromPlayer, toPlayer, amount);
     }
 
     // === INFORMATIONS ===
@@ -273,11 +234,6 @@ public class PrisonTycoonHook {
      * Affiche les informations économiques d'un joueur
      */
     public void showPlayerEconomy(Player player) {
-        if (!isEnabled()) {
-            player.sendMessage("§cÉconomie PrisonTycoon non disponible");
-            return;
-        }
-
         long coins = getCoins(player.getUniqueId());
         long tokens = getTokens(player.getUniqueId());
         long beacons = getBeacons(player.getUniqueId());

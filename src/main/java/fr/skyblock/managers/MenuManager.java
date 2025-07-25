@@ -321,76 +321,45 @@ public class MenuManager implements Listener {
         int nextSize = island.getSize() + 25;
         boolean canExpand = nextSize <= plugin.getMaxIslandSize();
 
-        if (plugin.getPrisonTycoonHook().isEnabled()) {
-            long expandCost = plugin.getPrisonTycoonHook().calculateExpandCost(island.getSize(), nextSize);
-            boolean hasBeacons = plugin.getPrisonTycoonHook().hasBeacons(player.getUniqueId(), expandCost);
-            canExpand = canExpand && hasBeacons;
+        long expandCost = plugin.getPrisonTycoonHook().calculateExpandCost(island.getSize(), nextSize);
+        boolean hasBeacons = plugin.getPrisonTycoonHook().hasBeacons(player.getUniqueId(), expandCost);
+        canExpand = canExpand && hasBeacons;
 
-            inv.setItem(11, createItem(canExpand ? Material.EMERALD : Material.BARRIER,
-                    ChatColor.GREEN + "Agrandir l'île",
-                    ChatColor.GRAY + "Taille actuelle: " + ChatColor.WHITE + island.getSize() + "x" + island.getSize(),
-                    ChatColor.GRAY + "Nouvelle taille: " + ChatColor.WHITE + nextSize + "x" + nextSize,
-                    ChatColor.GRAY + "Coût: " + ChatColor.AQUA + expandCost + " beacons",
-                    ChatColor.GRAY + "Vos beacons: " + ChatColor.WHITE + plugin.getPrisonTycoonHook().getBeacons(player.getUniqueId()),
-                    "",
-                    canExpand ? ChatColor.GREEN + "Clic pour agrandir" : ChatColor.RED + "Pas assez de beacons"));
-        } else {
-            inv.setItem(11, createItem(canExpand ? Material.EMERALD : Material.BARRIER,
-                    ChatColor.GREEN + "Agrandir l'île",
-                    ChatColor.GRAY + "Taille actuelle: " + ChatColor.WHITE + island.getSize() + "x" + island.getSize(),
-                    ChatColor.GRAY + "Nouvelle taille: " + ChatColor.WHITE + nextSize + "x" + nextSize,
-                    ChatColor.GRAY + "Coût: " + ChatColor.WHITE + "Gratuit",
-                    "",
-                    canExpand ? ChatColor.GREEN + "Clic pour agrandir" : ChatColor.RED + "Taille maximale atteinte"));
-        }
+        inv.setItem(11, createItem(canExpand ? Material.EMERALD : Material.BARRIER,
+                ChatColor.GREEN + "Agrandir l'île",
+                ChatColor.GRAY + "Taille actuelle: " + ChatColor.WHITE + island.getSize() + "x" + island.getSize(),
+                ChatColor.GRAY + "Nouvelle taille: " + ChatColor.WHITE + nextSize + "x" + nextSize,
+                ChatColor.GRAY + "Coût: " + ChatColor.AQUA + expandCost + " beacons",
+                ChatColor.GRAY + "Vos beacons: " + ChatColor.WHITE + plugin.getPrisonTycoonHook().getBeacons(player.getUniqueId()),
+                "",
+                canExpand ? ChatColor.GREEN + "Clic pour agrandir" : ChatColor.RED + "Pas assez de beacons"));
 
         // Amélioration du niveau avec coins
         int nextLevel = island.getLevel() + 1;
         boolean canUpgradeLevel = true;
 
-        if (plugin.getPrisonTycoonHook().isEnabled()) {
-            long levelCost = plugin.getPrisonTycoonHook().calculateLevelUpgradeCost(island.getLevel(), nextLevel);
-            boolean hasCoins = plugin.getPrisonTycoonHook().hasCoins(player.getUniqueId(), levelCost);
-            canUpgradeLevel = hasCoins;
+        long levelCost = plugin.getPrisonTycoonHook().calculateLevelUpgradeCost(island.getLevel(), nextLevel);
+        boolean hasCoins = plugin.getPrisonTycoonHook().hasCoins(player.getUniqueId(), levelCost);
+        canUpgradeLevel = hasCoins;
 
-            inv.setItem(13, createItem(canUpgradeLevel ? Material.EXPERIENCE_BOTTLE : Material.BARRIER,
-                    ChatColor.BLUE + "Améliorer le niveau",
-                    ChatColor.GRAY + "Niveau actuel: " + ChatColor.WHITE + island.getLevel(),
-                    ChatColor.GRAY + "Nouveau niveau: " + ChatColor.WHITE + nextLevel,
-                    ChatColor.GRAY + "Coût: " + ChatColor.GOLD + levelCost + " coins",
-                    ChatColor.GRAY + "Vos coins: " + ChatColor.WHITE + plugin.getPrisonTycoonHook().getCoins(player.getUniqueId()),
-                    "",
-                    ChatColor.GRAY + "Augmente le prestige de votre île",
-                    "",
-                    canUpgradeLevel ? ChatColor.GREEN + "Clic pour améliorer" : ChatColor.RED + "Pas assez de coins"));
-        } else {
-            inv.setItem(13, createItem(Material.EXPERIENCE_BOTTLE,
-                    ChatColor.BLUE + "Améliorer le niveau",
-                    ChatColor.GRAY + "Niveau actuel: " + ChatColor.WHITE + island.getLevel(),
-                    ChatColor.GRAY + "Nouveau niveau: " + ChatColor.WHITE + nextLevel,
-                    ChatColor.GRAY + "Coût: " + ChatColor.WHITE + "Gratuit",
-                    "",
-                    ChatColor.GRAY + "Augmente le prestige de votre île",
-                    "",
-                    ChatColor.GREEN + "Clic pour améliorer"));
-        }
+        inv.setItem(13, createItem(canUpgradeLevel ? Material.EXPERIENCE_BOTTLE : Material.BARRIER,
+                ChatColor.BLUE + "Améliorer le niveau",
+                ChatColor.GRAY + "Niveau actuel: " + ChatColor.WHITE + island.getLevel(),
+                ChatColor.GRAY + "Nouveau niveau: " + ChatColor.WHITE + nextLevel,
+                ChatColor.GRAY + "Coût: " + ChatColor.GOLD + levelCost + " coins",
+                ChatColor.GRAY + "Vos coins: " + ChatColor.WHITE + plugin.getPrisonTycoonHook().getCoins(player.getUniqueId()),
+                "",
+                ChatColor.GRAY + "Augmente le prestige de votre île",
+                "",
+                canUpgradeLevel ? ChatColor.GREEN + "Clic pour améliorer" : ChatColor.RED + "Pas assez de coins"));
 
         // Économie PrisonTycoon
-        if (plugin.getPrisonTycoonHook().isEnabled()) {
-            inv.setItem(15, createItem(Material.GOLD_INGOT, ChatColor.GOLD + "Votre Économie",
-                    ChatColor.GRAY + "Coins: " + ChatColor.GOLD + plugin.getPrisonTycoonHook().getCoins(player.getUniqueId()),
-                    ChatColor.GRAY + "Tokens: " + ChatColor.LIGHT_PURPLE + plugin.getPrisonTycoonHook().getTokens(player.getUniqueId()),
-                    ChatColor.GRAY + "Beacons: " + ChatColor.AQUA + plugin.getPrisonTycoonHook().getBeacons(player.getUniqueId()),
-                    "",
-                    ChatColor.YELLOW + "Clic pour plus de détails"));
-        } else {
-            // Fonctionnalités futures
-            inv.setItem(15, createItem(Material.BEACON, ChatColor.GOLD + "Fonctionnalités Premium",
-                    ChatColor.GRAY + "Débloquez des fonctionnalités",
-                    ChatColor.GRAY + "exclusives pour votre île",
-                    "",
-                    ChatColor.YELLOW + "Installez PrisonTycoon pour plus d'options"));
-        }
+        inv.setItem(15, createItem(Material.GOLD_INGOT, ChatColor.GOLD + "Votre Économie",
+                ChatColor.GRAY + "Coins: " + ChatColor.GOLD + plugin.getPrisonTycoonHook().getCoins(player.getUniqueId()),
+                ChatColor.GRAY + "Tokens: " + ChatColor.LIGHT_PURPLE + plugin.getPrisonTycoonHook().getTokens(player.getUniqueId()),
+                ChatColor.GRAY + "Beacons: " + ChatColor.AQUA + plugin.getPrisonTycoonHook().getBeacons(player.getUniqueId()),
+                "",
+                ChatColor.YELLOW + "Clic pour plus de détails"));
 
         // Bouton retour
         inv.setItem(31, createItem(Material.ARROW, ChatColor.YELLOW + "Retour",
@@ -613,13 +582,9 @@ public class MenuManager implements Listener {
                     player.sendMessage(ChatColor.GREEN + "Île agrandie avec succès !");
                     openUpgradeMenu(player); // Rafraîchir
                 } else {
-                    if (plugin.getPrisonTycoonHook().isEnabled()) {
-                        long cost = plugin.getPrisonTycoonHook().calculateExpandCost(island.getSize(), nextSize);
-                        player.sendMessage(ChatColor.RED + "Impossible d'agrandir l'île !");
-                        player.sendMessage(ChatColor.GRAY + "Beacons requis: " + ChatColor.AQUA + cost);
-                    } else {
-                        player.sendMessage(ChatColor.RED + "Impossible d'agrandir l'île !");
-                    }
+                    long cost = plugin.getPrisonTycoonHook().calculateExpandCost(island.getSize(), nextSize);
+                    player.sendMessage(ChatColor.RED + "Impossible d'agrandir l'île !");
+                    player.sendMessage(ChatColor.GRAY + "Beacons requis: " + ChatColor.AQUA + cost);
                 }
             }
             case 13 -> { // Améliorer niveau
@@ -629,20 +594,14 @@ public class MenuManager implements Listener {
                     player.sendMessage(ChatColor.GREEN + "Niveau de l'île amélioré !");
                     openUpgradeMenu(player); // Rafraîchir
                 } else {
-                    if (plugin.getPrisonTycoonHook().isEnabled()) {
-                        long cost = plugin.getPrisonTycoonHook().calculateLevelUpgradeCost(island.getLevel(), nextLevel);
-                        player.sendMessage(ChatColor.RED + "Impossible d'améliorer le niveau !");
-                        player.sendMessage(ChatColor.GRAY + "Coins requis: " + ChatColor.GOLD + cost);
-                    } else {
-                        player.sendMessage(ChatColor.RED + "Impossible d'améliorer le niveau !");
-                    }
+                    long cost = plugin.getPrisonTycoonHook().calculateLevelUpgradeCost(island.getLevel(), nextLevel);
+                    player.sendMessage(ChatColor.RED + "Impossible d'améliorer le niveau !");
+                    player.sendMessage(ChatColor.GRAY + "Coins requis: " + ChatColor.GOLD + cost);
                 }
             }
             case 15 -> { // Économie
-                if (plugin.getPrisonTycoonHook().isEnabled()) {
-                    player.closeInventory();
-                    plugin.getPrisonTycoonHook().showPlayerEconomy(player);
-                }
+                player.closeInventory();
+                plugin.getPrisonTycoonHook().showPlayerEconomy(player);
             }
         }
     }
