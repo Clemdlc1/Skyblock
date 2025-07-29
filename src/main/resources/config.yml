@@ -30,6 +30,30 @@ island:
     visitor-break: false
     visitor-chest: false
 
+# Configuration des warps d'îles
+warps:
+  # Niveaux requis pour débloquer les warps
+  unlock-levels:
+    first-warp: 10    # Premier warp au niveau 10
+    second-warp: 100  # Deuxième warp au niveau 100
+    third-warp: 1000  # Troisième warp au niveau 1000
+
+  # Bonus VIP pour les warps (+1 warp permanent)
+  vip-permission: "specialmine.vip"
+
+  # Coût de promotion des îles (en beacons par jour)
+  promotion-cost: 100
+
+  # Durée maximale de promotion (en jours)
+  max-promotion-days: 30
+
+  # Limites d'affichage
+  warps-per-page: 28
+  max-description-length: 100
+
+  # Messages par défaut
+  default-warp-description: "Warp créé par {player}"
+
 # Configuration de l'économie
 economy:
   # Argent de départ pour les nouveaux joueurs (si PrisonTycoon non disponible)
@@ -66,6 +90,12 @@ prison-tycoon:
     tokens: 10
     beacons: 5
 
+  # Coûts des améliorations spéciales
+  special-upgrades:
+    revenue-boost-24h: 50      # beacons pour 24h de double revenus
+    advanced-protection-7d: 10000  # coins pour 7 jours de protection
+    vip-warp-permanent: 500    # beacons pour +1 warp permanent
+
   # Messages d'économie
   messages:
     no-permission: "&cVous devez avoir la permission &bspecialmine.free &cou assez de ressources !"
@@ -90,6 +120,33 @@ schematics:
   # Permettre aux joueurs de choisir leur schématic
   allow-selection: true
 
+  # Schématics disponibles et leurs caractéristiques
+  available:
+    classic:
+      name: "Île Classique"
+      difficulty: "facile"
+      recommended-for: "débutants"
+    desert:
+      name: "Île Désertique"
+      difficulty: "moyen"
+      recommended-for: "agriculteurs"
+    jungle:
+      name: "Île Jungle"
+      difficulty: "moyen"
+      recommended-for: "expérimentés"
+    snow:
+      name: "Île Enneigée"
+      difficulty: "moyen"
+      recommended-for: "amateurs de froid"
+    mushroom:
+      name: "Île Champignon"
+      difficulty: "difficile"
+      recommended-for: "experts"
+    nether:
+      name: "Île du Nether"
+      difficulty: "très difficile"
+      recommended-for: "maîtres"
+
 # Configuration des performances
 performance:
   # Sauvegarde automatique (en minutes)
@@ -98,8 +155,33 @@ performance:
   # Nettoyage automatique des invitations expirées (en minutes)
   cleanup-interval: 5
 
+  # Nettoyage des promotions expirées (en minutes)
+  promotion-cleanup-interval: 5
+
   # Limite de world border par défaut
   world-border-enabled: true
+
+  # Cache des warps en mémoire
+  warp-cache-enabled: true
+  warp-cache-size: 1000
+
+# Configuration des menus
+menus:
+  # Taille des inventaires
+  main-menu-size: 45
+  warp-menu-size: 54
+  members-menu-size: 54
+  upgrade-menu-size: 45
+
+  # Éléments de décoration
+  fill-empty-slots: true
+  glass-pane-color: "GRAY"
+
+  # Animations et effets
+  menu-sounds: true
+  click-sound: "UI_BUTTON_CLICK"
+  success-sound: "ENTITY_PLAYER_LEVELUP"
+  error-sound: "ENTITY_VILLAGER_NO"
 
 # Configuration des messages
 messages:
@@ -110,12 +192,24 @@ messages:
   welcome:
     new-player: true
     show-commands: true
+    show-warp-info: true
 
   # Notifications
   notifications:
     island-activity: true
     member-join-leave: true
     invitations: true
+    warp-creation: true
+    promotions: true
+
+  # Messages de warps
+  warp-messages:
+    created: "&aWarp '&e{name}&a' créé avec succès !"
+    deleted: "&cWarp '&e{name}&c' supprimé !"
+    teleported: "&aTéléporté au warp &e{name}&a sur l'île de &b{owner}&a !"
+    not-found: "&cCe warp n'existe pas !"
+    no-permission: "&cVous n'avez pas la permission d'accéder à ce warp !"
+    island-closed: "&cCette île est fermée aux visiteurs !"
 
 # Configuration de debug
 debug:
@@ -130,6 +224,12 @@ debug:
 
   # Logs détaillés pour les îles
   island-logs: false
+
+  # Logs détaillés pour les warps
+  warp-logs: false
+
+  # Logs détaillés pour les menus
+  menu-logs: false
 
 # Configuration avancée
 advanced:
@@ -150,3 +250,15 @@ advanced:
 
   # Nettoyage automatique des mondes orphelins au démarrage
   cleanup-orphaned-worlds: true
+
+  # Sécurité des warps
+  warp-safety-check: true
+  teleport-delay: 3  # secondes
+
+  # Limites de noms
+  max-island-name-length: 32
+  max-warp-name-length: 16
+
+  # Anti-spam
+  command-cooldown: 1  # secondes entre les commandes
+  warp-cooldown: 5     # secondes entre les téléportations

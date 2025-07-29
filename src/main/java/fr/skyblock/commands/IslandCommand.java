@@ -2,6 +2,7 @@ package fr.skyblock.commands;
 
 import fr.skyblock.CustomSkyblock;
 import fr.skyblock.models.Island;
+import fr.skyblock.models.IslandWarp;
 import fr.skyblock.models.SkyblockPlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -12,6 +13,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class IslandCommand implements CommandExecutor, TabCompleter {
 
@@ -46,13 +48,18 @@ public class IslandCommand implements CommandExecutor, TabCompleter {
             case "leave" -> handleLeave(player);
             case "info", "i" -> handleInfo(player, args);
             case "menu", "m" -> handleMenu(player);
-            case "warp", "w" -> handleWarp(player, args);
             case "sethome" -> handleSetHome(player);
             case "bank", "b" -> handleBank(player, args);
             case "level", "l" -> handleLevel(player);
             case "top" -> handleTop(player);
             case "expand" -> handleExpand(player, args);
             case "flags", "settings" -> handleFlags(player);
+            case "warp", "w" -> handleWarp(player, args);
+            case "setwarp" -> handleSetWarp(player, args);
+            case "delwarp" -> handleDelWarp(player, args);
+            case "open" -> handleOpen(player);
+            case "close" -> handleClose(player);
+            case "promote" -> handlePromote(player, args);
             default -> sendHelp(player);
         }
 
@@ -69,13 +76,19 @@ public class IslandCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(ChatColor.AQUA + "/is accept <joueur>" + ChatColor.WHITE + " - Accepter une invitation");
         player.sendMessage(ChatColor.AQUA + "/is kick <joueur>" + ChatColor.WHITE + " - Expulser un membre");
         player.sendMessage(ChatColor.AQUA + "/is leave" + ChatColor.WHITE + " - Quitter une île");
-        player.sendMessage(ChatColor.AQUA + "/is warp <joueur>" + ChatColor.WHITE + " - Se téléporter à une île");
         player.sendMessage(ChatColor.AQUA + "/is bank [deposit|withdraw] [montant]" + ChatColor.WHITE + " - Gérer la banque");
         player.sendMessage(ChatColor.AQUA + "/is level" + ChatColor.WHITE + " - Voir le niveau de l'île");
         player.sendMessage(ChatColor.AQUA + "/is top" + ChatColor.WHITE + " - Classement des îles");
         player.sendMessage(ChatColor.AQUA + "/is expand <taille>" + ChatColor.WHITE + " - Agrandir l'île");
         player.sendMessage(ChatColor.AQUA + "/is flags" + ChatColor.WHITE + " - Gérer les paramètres");
         player.sendMessage(ChatColor.AQUA + "/is delete" + ChatColor.WHITE + " - Supprimer votre île");
+        player.sendMessage(ChatColor.AQUA + "/is warp [joueur]" + ChatColor.WHITE + " - Explorer les warps");
+        player.sendMessage(ChatColor.AQUA + "/is setwarp <nom> [desc]" + ChatColor.WHITE + " - Créer un warp");
+        player.sendMessage(ChatColor.AQUA + "/is delwarp <nom>" + ChatColor.WHITE + " - Supprimer un warp");
+        player.sendMessage(ChatColor.AQUA + "/is open" + ChatColor.WHITE + " - Ouvrir l'île aux visiteurs");
+        player.sendMessage(ChatColor.AQUA + "/is close" + ChatColor.WHITE + " - Fermer l'île aux visiteurs");
+        player.sendMessage(ChatColor.AQUA + "/is promote [jours]" + ChatColor.WHITE + " - Promouvoir l'île");
+
     }
 
     private void handleCreate(Player player) {
@@ -349,39 +362,6 @@ public class IslandCommand implements CommandExecutor, TabCompleter {
         plugin.getMenuManager().openMainMenu(player);
     }
 
-    private void handleWarp(Player player, String[] args) {
-        if (args.length < 2) {
-            player.sendMessage(ChatColor.RED + "Usage: /is warp <joueur>");
-            return;
-        }
-
-        Player target = Bukkit.getPlayer(args[1]);
-        if (target == null) {
-            player.sendMessage(ChatColor.RED + "Joueur introuvable !");
-            return;
-        }
-
-        SkyblockPlayer targetPlayer = plugin.getDatabaseManager().loadPlayer(target.getUniqueId());
-        if (targetPlayer == null || !targetPlayer.hasIsland()) {
-            player.sendMessage(ChatColor.RED + "Ce joueur n'a pas d'île !");
-            return;
-        }
-
-        Island targetIsland = plugin.getDatabaseManager().loadIsland(targetPlayer.getIslandId());
-        if (targetIsland == null) {
-            player.sendMessage(ChatColor.RED + "Impossible de trouver l'île de ce joueur !");
-            return;
-        }
-
-        if (plugin.getIslandManager().teleportToIsland(player, targetIsland)) {
-            player.sendMessage(ChatColor.GREEN + "Vous avez été téléporté à l'île de " + target.getName() + " !");
-            targetIsland.addVisitor(player.getUniqueId());
-            plugin.getDatabaseManager().saveIsland(targetIsland);
-        } else {
-            player.sendMessage(ChatColor.RED + "Erreur lors de la téléportation !");
-        }
-    }
-
     private void handleSetHome(Player player) {
         SkyblockPlayer skyblockPlayer = plugin.getDatabaseManager().loadPlayer(player.getUniqueId());
         if (skyblockPlayer == null || !skyblockPlayer.hasIsland()) {
@@ -564,6 +544,232 @@ public class IslandCommand implements CommandExecutor, TabCompleter {
         plugin.getMenuManager().openFlagsMenu(player);
     }
 
+    private void handleWarp(Player player, String[] args) {
+        if (args.length == 1) {
+            // Ouvrir le menu principal des warps
+            plugin.getMenuManager().openWarpMenu(player);
+        } else if (args.length == 2) {
+            // Ouvrir les warps d'un joueur spécifique
+            plugin.getMenuManager().openPlayerWarpsMenu(player, args[1]);
+        } else {
+            player.sendMessage(ChatColor.RED + "Usage: /is warp [joueur]");
+        }
+    }
+
+    private void handleSetWarp(Player player, String[] args) {
+        if (args.length < 2) {
+            player.sendMessage(ChatColor.RED + "Usage: /is setwarp <nom> [description]");
+            return;
+        }
+
+        SkyblockPlayer skyblockPlayer = plugin.getDatabaseManager().loadPlayer(player.getUniqueId());
+        if (skyblockPlayer == null || !skyblockPlayer.hasIsland()) {
+            player.sendMessage(ChatColor.RED + "Vous n'avez pas d'île !");
+            return;
+        }
+
+        Island island = plugin.getDatabaseManager().loadIsland(skyblockPlayer.getIslandId());
+        if (island == null) {
+            player.sendMessage(ChatColor.RED + "Impossible de charger votre île !");
+            return;
+        }
+
+        if (!island.getOwner().equals(player.getUniqueId())) {
+            player.sendMessage(ChatColor.RED + "Seul le propriétaire peut créer des warps !");
+            return;
+        }
+
+        // Vérifier si le joueur est sur son île
+        if (!plugin.getIslandManager().isPlayerOnIsland(player, island)) {
+            player.sendMessage(ChatColor.RED + "Vous devez être sur votre île pour créer un warp !");
+            return;
+        }
+
+        if (!plugin.getWarpManager().canCreateWarp(island)) {
+            player.sendMessage(ChatColor.RED + "Vous avez atteint la limite de warps pour votre île !");
+            player.sendMessage(ChatColor.GRAY + "Améliorez votre île pour débloquer plus de warps :");
+            player.sendMessage(ChatColor.GRAY + "• Niveau 10: " + ChatColor.GREEN + "1 warp");
+            player.sendMessage(ChatColor.GRAY + "• Niveau 100: " + ChatColor.GREEN + "2 warps");
+            player.sendMessage(ChatColor.GRAY + "• Niveau 1000: " + ChatColor.GREEN + "3 warps");
+            player.sendMessage(ChatColor.GRAY + "• Permission VIP: " + ChatColor.GOLD + "+1 warp");
+            return;
+        }
+
+        String warpName = args[1];
+        String description = args.length > 2 ? String.join(" ", Arrays.copyOfRange(args, 2, args.length)) : "Warp créé par " + player.getName();
+
+        // Vérifier si un warp avec ce nom existe déjà
+        List<IslandWarp> existingWarps = plugin.getWarpManager().getIslandWarps(island.getId());
+        for (IslandWarp existingWarp : existingWarps) {
+            if (existingWarp.getName().equalsIgnoreCase(warpName)) {
+                player.sendMessage(ChatColor.RED + "Un warp avec ce nom existe déjà !");
+                return;
+            }
+        }
+
+        // Créer le warp
+        IslandWarp warp = plugin.getWarpManager().createWarp(island.getId(), warpName, description, player.getLocation());
+
+        player.sendMessage(ChatColor.GREEN + "Warp '" + ChatColor.YELLOW + warpName + ChatColor.GREEN + "' créé avec succès !");
+        player.sendMessage(ChatColor.GRAY + "Description: " + ChatColor.WHITE + description);
+        player.sendMessage(ChatColor.GRAY + "Les autres joueurs peuvent maintenant se téléporter à ce warp !");
+    }
+
+    private void handleDelWarp(Player player, String[] args) {
+        if (args.length < 2) {
+            player.sendMessage(ChatColor.RED + "Usage: /is delwarp <nom>");
+            return;
+        }
+
+        SkyblockPlayer skyblockPlayer = plugin.getDatabaseManager().loadPlayer(player.getUniqueId());
+        if (skyblockPlayer == null || !skyblockPlayer.hasIsland()) {
+            player.sendMessage(ChatColor.RED + "Vous n'avez pas d'île !");
+            return;
+        }
+
+        Island island = plugin.getDatabaseManager().loadIsland(skyblockPlayer.getIslandId());
+        if (island == null) {
+            player.sendMessage(ChatColor.RED + "Impossible de charger votre île !");
+            return;
+        }
+
+        if (!island.getOwner().equals(player.getUniqueId())) {
+            player.sendMessage(ChatColor.RED + "Seul le propriétaire peut supprimer des warps !");
+            return;
+        }
+
+        String warpName = args[1];
+        List<IslandWarp> warps = plugin.getWarpManager().getIslandWarps(island.getId());
+
+        IslandWarp warpToDelete = null;
+        for (IslandWarp warp : warps) {
+            if (warp.getName().equalsIgnoreCase(warpName)) {
+                warpToDelete = warp;
+                break;
+            }
+        }
+
+        if (warpToDelete == null) {
+            player.sendMessage(ChatColor.RED + "Aucun warp trouvé avec le nom '" + warpName + "' !");
+
+            if (!warps.isEmpty()) {
+                player.sendMessage(ChatColor.YELLOW + "Warps disponibles:");
+                for (IslandWarp warp : warps) {
+                    player.sendMessage(ChatColor.GRAY + "- " + ChatColor.WHITE + warp.getName());
+                }
+            }
+            return;
+        }
+
+        plugin.getWarpManager().deleteWarp(warpToDelete.getId());
+        player.sendMessage(ChatColor.GREEN + "Warp '" + ChatColor.YELLOW + warpName + ChatColor.GREEN + "' supprimé avec succès !");
+    }
+
+    private void handleOpen(Player player) {
+        SkyblockPlayer skyblockPlayer = plugin.getDatabaseManager().loadPlayer(player.getUniqueId());
+        if (skyblockPlayer == null || !skyblockPlayer.hasIsland()) {
+            player.sendMessage(ChatColor.RED + "Vous n'avez pas d'île !");
+            return;
+        }
+
+        Island island = plugin.getDatabaseManager().loadIsland(skyblockPlayer.getIslandId());
+        if (island == null) {
+            player.sendMessage(ChatColor.RED + "Impossible de charger votre île !");
+            return;
+        }
+
+        if (!island.getOwner().equals(player.getUniqueId())) {
+            player.sendMessage(ChatColor.RED + "Seul le propriétaire peut ouvrir/fermer l'île !");
+            return;
+        }
+
+        if (plugin.getWarpManager().isIslandOpen(island)) {
+            player.sendMessage(ChatColor.YELLOW + "Votre île est déjà ouverte aux visiteurs !");
+            return;
+        }
+
+        plugin.getWarpManager().setIslandOpen(island, true);
+        player.sendMessage(ChatColor.GREEN + "Votre île est maintenant ouverte aux visiteurs !");
+        player.sendMessage(ChatColor.GRAY + "Les autres joueurs peuvent se téléporter sur vos warps publics.");
+    }
+
+    private void handleClose(Player player) {
+        SkyblockPlayer skyblockPlayer = plugin.getDatabaseManager().loadPlayer(player.getUniqueId());
+        if (skyblockPlayer == null || !skyblockPlayer.hasIsland()) {
+            player.sendMessage(ChatColor.RED + "Vous n'avez pas d'île !");
+            return;
+        }
+
+        Island island = plugin.getDatabaseManager().loadIsland(skyblockPlayer.getIslandId());
+        if (island == null) {
+            player.sendMessage(ChatColor.RED + "Impossible de charger votre île !");
+            return;
+        }
+
+        if (!island.getOwner().equals(player.getUniqueId())) {
+            player.sendMessage(ChatColor.RED + "Seul le propriétaire peut ouvrir/fermer l'île !");
+            return;
+        }
+
+        if (!plugin.getWarpManager().isIslandOpen(island)) {
+            player.sendMessage(ChatColor.YELLOW + "Votre île est déjà fermée aux visiteurs !");
+            return;
+        }
+
+        plugin.getWarpManager().setIslandOpen(island, false);
+        player.sendMessage(ChatColor.RED + "Votre île est maintenant fermée aux visiteurs !");
+        player.sendMessage(ChatColor.GRAY + "Les autres joueurs ne peuvent plus se téléporter sur vos warps.");
+    }
+
+    private void handlePromote(Player player, String[] args) {
+        SkyblockPlayer skyblockPlayer = plugin.getDatabaseManager().loadPlayer(player.getUniqueId());
+        if (skyblockPlayer == null || !skyblockPlayer.hasIsland()) {
+            player.sendMessage(ChatColor.RED + "Vous n'avez pas d'île !");
+            return;
+        }
+
+        Island island = plugin.getDatabaseManager().loadIsland(skyblockPlayer.getIslandId());
+        if (island == null) {
+            player.sendMessage(ChatColor.RED + "Impossible de charger votre île !");
+            return;
+        }
+
+        if (!island.getOwner().equals(player.getUniqueId())) {
+            player.sendMessage(ChatColor.RED + "Seul le propriétaire peut promouvoir l'île !");
+            return;
+        }
+
+        if (plugin.getWarpManager().isIslandPromoted(island.getId())) {
+            player.sendMessage(ChatColor.YELLOW + "Votre île est déjà promue !");
+            return;
+        }
+
+        int days = 1;
+        if (args.length > 1) {
+            try {
+                days = Integer.parseInt(args[1]);
+                if (days <= 0 || days > 30) {
+                    player.sendMessage(ChatColor.RED + "Le nombre de jours doit être entre 1 et 30 !");
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                player.sendMessage(ChatColor.RED + "Nombre de jours invalide !");
+                return;
+            }
+        }
+
+        long cost = plugin.getWarpManager().calculatePromotionCost(days);
+
+        player.sendMessage(ChatColor.YELLOW + "Promotion de votre île pour " + days + " jour(s)");
+        player.sendMessage(ChatColor.GRAY + "Coût: " + ChatColor.AQUA + cost + " beacons");
+        player.sendMessage(ChatColor.GRAY + "Vos beacons: " + ChatColor.WHITE + plugin.getPrisonTycoonHook().getBeacons(player.getUniqueId()));
+
+        if (plugin.getWarpManager().promoteIsland(island.getId(), player, days)) {
+            // Notifier tous les membres
+            notifyIslandMembers(island, ChatColor.GOLD + "🎉 " + ChatColor.GREEN + "Votre île a été promue pour " + days + " jour(s) ! " + ChatColor.GOLD + "🎉");
+        }
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
@@ -584,6 +790,23 @@ public class IslandCommand implements CommandExecutor, TabCompleter {
                             .map(Player::getName)
                             .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
                             .toList();
+                }
+                case "setwarp", "delwarp" -> {
+                    if (args.length == 2) {
+                        // Pour delwarp, proposer les noms des warps existants
+                        if ("delwarp".equals(args[0])) {
+                            SkyblockPlayer skyblockPlayer = plugin.getDatabaseManager().loadPlayer(((Player) sender).getUniqueId());
+                            if (skyblockPlayer != null && skyblockPlayer.hasIsland()) {
+                                Island island = plugin.getDatabaseManager().loadIsland(skyblockPlayer.getIslandId());
+                                if (island != null) {
+                                    return plugin.getWarpManager().getIslandWarps(island.getId()).stream()
+                                            .map(IslandWarp::getName)
+                                            .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
+                                            .collect(Collectors.toList());
+                                }
+                            }
+                        }
+                    }
                 }
                 case "bank" -> {
                     return Arrays.asList("deposit", "withdraw");
@@ -618,6 +841,22 @@ public class IslandCommand implements CommandExecutor, TabCompleter {
         }
 
         return null;
+    }
+
+    private void notifyIslandMembers(Island island, String message) {
+        // Notifier le propriétaire
+        Player owner = Bukkit.getPlayer(island.getOwner());
+        if (owner != null && owner.isOnline()) {
+            owner.sendMessage(message);
+        }
+
+        // Notifier tous les membres
+        for (UUID memberUuid : island.getMembers()) {
+            Player member = Bukkit.getPlayer(memberUuid);
+            if (member != null && member.isOnline()) {
+                member.sendMessage(message);
+            }
+        }
     }
 
     private String getPlayerName(UUID playerUuid) {

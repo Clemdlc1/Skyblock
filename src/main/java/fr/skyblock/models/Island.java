@@ -1,11 +1,15 @@
 package fr.skyblock.models;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.*;
 
 public class Island {
+
+    private static final Gson gson = new GsonBuilder().create();
 
     private UUID id;
     private UUID owner;
@@ -109,87 +113,12 @@ public class Island {
         this.lastActivity = System.currentTimeMillis();
     }
 
-    // Sauvegarde et chargement YAML
-    public void saveToYaml(ConfigurationSection section) {
-        section.set("id", id.toString());
-        section.set("owner", owner.toString());
-        section.set("name", name);
-        section.set("center.world", center.getWorld().getName());
-        section.set("center.x", center.getX());
-        section.set("center.y", center.getY());
-        section.set("center.z", center.getZ());
-        section.set("size", size);
-        section.set("level", level);
-        section.set("bank", bank);
-        section.set("creation-time", creationTime);
-        section.set("last-activity", lastActivity);
-
-        // Sauvegarde des membres
-        List<String> membersList = new ArrayList<>();
-        for (UUID member : members) {
-            membersList.add(member.toString());
-        }
-        section.set("members", membersList);
-
-        // Sauvegarde des visiteurs
-        List<String> visitorsList = new ArrayList<>();
-        for (UUID visitor : visitors) {
-            visitorsList.add(visitor.toString());
-        }
-        section.set("visitors", visitorsList);
-
-        // Sauvegarde des flags
-        ConfigurationSection flagsSection = section.createSection("flags");
-        for (Map.Entry<IslandFlag, Boolean> entry : flags.entrySet()) {
-            flagsSection.set(entry.getKey().name(), entry.getValue());
-        }
+    public String toJson() {
+        return gson.toJson(this);
     }
 
-    public static Island loadFromYaml(ConfigurationSection section) {
-        UUID id = UUID.fromString(section.getString("id"));
-        UUID owner = UUID.fromString(section.getString("owner"));
-        String name = section.getString("name");
-
-        // Reconstruction de la location
-        String worldName = section.getString("center.world");
-        double x = section.getDouble("center.x");
-        double y = section.getDouble("center.y");
-        double z = section.getDouble("center.z");
-        Location center = new Location(org.bukkit.Bukkit.getWorld(worldName), x, y, z);
-
-        Island island = new Island(id, owner, name, center);
-        island.size = section.getInt("size", 50);
-        island.level = section.getInt("level", 1);
-        island.bank = section.getDouble("bank", 0.0);
-        island.creationTime = section.getLong("creation-time", System.currentTimeMillis());
-        island.lastActivity = section.getLong("last-activity", System.currentTimeMillis());
-
-        // Chargement des membres
-        List<String> membersList = section.getStringList("members");
-        for (String memberStr : membersList) {
-            island.members.add(UUID.fromString(memberStr));
-        }
-
-        // Chargement des visiteurs
-        List<String> visitorsList = section.getStringList("visitors");
-        for (String visitorStr : visitorsList) {
-            island.visitors.add(UUID.fromString(visitorStr));
-        }
-
-        // Chargement des flags
-        ConfigurationSection flagsSection = section.getConfigurationSection("flags");
-        if (flagsSection != null) {
-            for (String key : flagsSection.getKeys(false)) {
-                try {
-                    IslandFlag flag = IslandFlag.valueOf(key);
-                    island.flags.put(flag, flagsSection.getBoolean(key));
-                } catch (IllegalArgumentException e) {
-                    // Flag inconnu, ignorer
-                }
-            }
-        }
-
-        return island;
+    public static Island fromJson(String json) {
+        return gson.fromJson(json, Island.class);
     }
 
     // Getters et Setters
@@ -220,4 +149,5 @@ public class Island {
     public boolean getFlag(IslandFlag flag) { return flags.getOrDefault(flag, false); }
     public long getCreationTime() { return creationTime; }
     public long getLastActivity() { return lastActivity; }
+    public void setLastActivity(long lastActivity) { this.lastActivity = lastActivity; }
 }

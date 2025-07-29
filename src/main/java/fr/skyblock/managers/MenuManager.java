@@ -3,6 +3,7 @@ package fr.skyblock.managers;
 import fr.skyblock.CustomSkyblock;
 import fr.skyblock.menus.*;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
 
 import java.util.Map;
 import java.util.UUID;
@@ -110,6 +111,7 @@ public class MenuManager {
             case "schematic" -> schematicMenu.handleClick(player, slot);
             case "warp" -> warpMenu.handleClick(player, slot);
             case "player_warps" -> warpMenu.handlePlayerWarpsClick(player, slot);
+            case "my_warps" -> warpMenu.handleMyWarpsClick(player, slot);
         }
     }
 

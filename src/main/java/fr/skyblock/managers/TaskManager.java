@@ -24,6 +24,7 @@ public class TaskManager {
             public void run() {
                 plugin.getLogger().info("Sauvegarde automatique en cours...");
                 plugin.getDatabaseManager().saveAll();
+                plugin.getDatabaseManager().clearCache();
                 plugin.getEconomyManager().saveAllBalances();
                 plugin.getLogger().info("Sauvegarde automatique terminée !");
             }

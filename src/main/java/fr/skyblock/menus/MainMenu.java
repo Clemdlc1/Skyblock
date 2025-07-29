@@ -19,7 +19,7 @@ public class MainMenu extends BaseMenu {
     public void open(Player player) {
         SkyblockPlayer skyblockPlayer = plugin.getDatabaseManager().getOrCreatePlayer(player.getUniqueId(), player.getName());
 
-        Inventory inv = createInventory(45, ChatColor.DARK_BLUE + "Menu Principal - Skyblock");
+        Inventory inv = createInventory(45, ChatColor.DARK_BLUE + "Menu - Skyblock");
 
         // Informations de l'île
         if (skyblockPlayer.hasIsland()) {

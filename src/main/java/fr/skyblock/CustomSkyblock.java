@@ -94,6 +94,7 @@ public final class CustomSkyblock extends JavaPlugin {
         }
         if (databaseManager != null) {
             databaseManager.saveAll();
+            databaseManager.close();
         }
         getLogger().info("CustomSkyblock désactivé !");
     }

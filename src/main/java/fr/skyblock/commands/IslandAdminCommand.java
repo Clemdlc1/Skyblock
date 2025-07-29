@@ -488,7 +488,7 @@ public class IslandAdminCommand implements CommandExecutor, TabCompleter {
             case "reset" -> {
                 sender.sendMessage(ChatColor.YELLOW + "Reset de l'économie en cours...");
                 // Reset de tous les soldes
-                for (SkyblockPlayer player : plugin.getDatabaseManager().getAllPlayers()) {
+                for (SkyblockPlayer player : new ArrayList<>(plugin.getDatabaseManager().getAllPlayers())) {
                     plugin.getEconomyManager().setBalance(player.getUuid(),
                             plugin.getConfig().getDouble("economy.starting-money", 50.0));
                 }
@@ -503,7 +503,7 @@ public class IslandAdminCommand implements CommandExecutor, TabCompleter {
                 double totalMoney = 0;
                 double totalBankMoney = 0;
 
-                for (SkyblockPlayer player : plugin.getDatabaseManager().getAllPlayers()) {
+                for (SkyblockPlayer player : new ArrayList<>(plugin.getDatabaseManager().getAllPlayers())) {
                     totalMoney += plugin.getEconomyManager().getBalance(player.getUuid());
                 }
 

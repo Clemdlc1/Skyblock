@@ -32,84 +32,100 @@ public class BankMenu extends BaseMenu {
             return;
         }
 
-        Inventory inv = createInventory(27, ChatColor.DARK_GREEN + "Banque de l'île");
+        Inventory inv = createInventory(36, ChatColor.DARK_GREEN + "Banque de l'île");
 
         // Solde actuel
-        List<String> balanceLore = new ArrayList<>();
-        balanceLore.add(ChatColor.GRAY + "Solde actuel: " + ChatColor.WHITE + String.format("%.2f $", island.getBank()));
-        balanceLore.add("");
-        balanceLore.add(ChatColor.GRAY + "La banque de l'île permet de");
-        balanceLore.add(ChatColor.GRAY + "stocker l'argent commun de l'île");
-        balanceLore.add("");
-        balanceLore.add(ChatColor.AQUA + "Tous les membres peuvent:");
-        balanceLore.add(ChatColor.GRAY + "• Voir le solde");
-        balanceLore.add(ChatColor.GRAY + "• Déposer de l'argent");
-        balanceLore.add(ChatColor.GRAY + "• Retirer de l'argent");
+        double bankBalance = island.getBank();
+        double playerBalance = plugin.getPrisonTycoonHook().getCoins(player.getUniqueId());
 
-        inv.setItem(4, createItem(Material.EMERALD_BLOCK, ChatColor.GREEN + "💰 Banque de l'île", balanceLore));
+        inv.setItem(4, createItem(Material.EMERALD_BLOCK, ChatColor.GREEN + "Solde de la banque",
+                ChatColor.GRAY + "Solde banque: " + ChatColor.WHITE + plugin.getEconomyManager().formatMoney(bankBalance),
+                ChatColor.GRAY + "Vos coins: " + ChatColor.GOLD + plugin.getPrisonTycoonHook().getCoins(player.getUniqueId()),
+                ChatColor.GRAY + "Vos tokens: " + ChatColor.LIGHT_PURPLE + plugin.getPrisonTycoonHook().getTokens(player.getUniqueId()),
+                ChatColor.GRAY + "Vos beacons: " + ChatColor.AQUA + plugin.getPrisonTycoonHook().getBeacons(player.getUniqueId()),
+                "",
+                ChatColor.YELLOW + "La banque stocke l'argent commun de l'île"));
 
-        // Boutons d'action
-        List<String> depositLore = new ArrayList<>();
-        depositLore.add(ChatColor.GRAY + "Déposer votre argent");
-        depositLore.add(ChatColor.GRAY + "dans la banque de l'île");
-        depositLore.add("");
-        depositLore.add(ChatColor.WHITE + "Votre solde: " + ChatColor.GOLD +
-                plugin.getEconomyManager().formatMoney(plugin.getEconomyManager().getBalance(player.getUniqueId())));
-        depositLore.add("");
-        depositLore.add(ChatColor.YELLOW + "Clic pour déposer");
+        // Actions rapides avec montants prédéfinis
+        List<Double> quickAmounts = List.of(100.0, 500.0, 1000.0, 5000.0);
+        int[] quickSlots = {10, 11, 12, 13};
 
-        inv.setItem(11, createItem(Material.GOLD_INGOT, ChatColor.YELLOW + "💵 Déposer de l'argent", depositLore));
+        for (int i = 0; i < quickAmounts.size(); i++) {
+            double amount = quickAmounts.get(i);
+            boolean canAfford = plugin.getPrisonTycoonHook().getCoins(player.getUniqueId()) >= amount;
 
-        List<String> withdrawLore = new ArrayList<>();
-        withdrawLore.add(ChatColor.GRAY + "Retirer de l'argent");
-        withdrawLore.add(ChatColor.GRAY + "de la banque de l'île");
-        withdrawLore.add("");
-        withdrawLore.add(ChatColor.WHITE + "Banque: " + ChatColor.GREEN + String.format("%.2f $", island.getBank()));
-        withdrawLore.add("");
-        withdrawLore.add(ChatColor.YELLOW + "Clic pour retirer");
+            Material material = canAfford ? Material.GOLD_INGOT : Material.CLAY;
+            ChatColor nameColor = canAfford ? ChatColor.YELLOW : ChatColor.GRAY;
 
-        inv.setItem(15, createItem(Material.DIAMOND, ChatColor.AQUA + "💎 Retirer de l'argent", withdrawLore));
+            inv.setItem(quickSlots[i], createItem(material, nameColor + "Déposer " + (int)amount + " coins",
+                    ChatColor.GRAY + "Déposer rapidement",
+                    ChatColor.GRAY + "" + (int)amount + " coins dans la banque",
+                    "",
+                    canAfford ? ChatColor.GREEN + "Clic pour déposer" : ChatColor.RED + "Coins insuffisants"));
+        }
 
-        // Statistiques de la banque
-        List<String> statsLore = new ArrayList<>();
-        statsLore.add(ChatColor.GRAY + "Statistiques de la banque:");
-        statsLore.add("");
-        statsLore.add(ChatColor.WHITE + "💰 Solde total: " + ChatColor.GREEN + String.format("%.2f $", island.getBank()));
-        statsLore.add(ChatColor.WHITE + "👥 Membres: " + ChatColor.AQUA + (island.getMembers().size() + 1));
-        statsLore.add(ChatColor.WHITE + "📊 Niveau île: " + ChatColor.YELLOW + island.getLevel());
-        statsLore.add("");
-        // TODO: Ajouter historique des transactions
-        statsLore.add(ChatColor.GRAY + "📋 Historique: " + ChatColor.YELLOW + "Bientôt disponible");
+        // Actions rapides de retrait
+        int[] withdrawSlots = {19, 20, 21, 22};
 
-        inv.setItem(13, createItem(Material.BOOK, ChatColor.BLUE + "📊 Statistiques", statsLore));
+        for (int i = 0; i < quickAmounts.size(); i++) {
+            double amount = quickAmounts.get(i);
+            boolean bankHasAmount = bankBalance >= amount;
 
-        // Actions rapides
-        List<String> quickActionsLore = new ArrayList<>();
-        quickActionsLore.add(ChatColor.GRAY + "Actions rapides:");
-        quickActionsLore.add("");
-        quickActionsLore.add(ChatColor.WHITE + "• " + ChatColor.GOLD + "Déposer tout");
-        quickActionsLore.add(ChatColor.WHITE + "• " + ChatColor.AQUA + "Retirer 1000$");
-        quickActionsLore.add(ChatColor.WHITE + "• " + ChatColor.GREEN + "Retirer 10000$");
-        quickActionsLore.add("");
-        quickActionsLore.add(ChatColor.YELLOW + "Clic pour voir les options");
+            Material material = bankHasAmount ? Material.DIAMOND : Material.CLAY;
+            ChatColor nameColor = bankHasAmount ? ChatColor.AQUA : ChatColor.GRAY;
 
-        inv.setItem(20, createItem(Material.NETHER_STAR, ChatColor.LIGHT_PURPLE + "⚡ Actions rapides", quickActionsLore));
+            inv.setItem(withdrawSlots[i], createItem(material, nameColor + "Retirer " + (int)amount,
+                    ChatColor.GRAY + "Retirer rapidement",
+                    ChatColor.GRAY + "" + (int)amount + " de la banque vers vos coins",
+                    "",
+                    bankHasAmount ? ChatColor.GREEN + "Clic pour retirer" : ChatColor.RED + "Fonds insuffisants"));
+        }
 
-        // Revenus passifs
-        double passiveIncome = calculatePassiveIncome(island);
-        List<String> passiveLore = new ArrayList<>();
-        passiveLore.add(ChatColor.GRAY + "Revenus passifs de l'île:");
-        passiveLore.add("");
-        passiveLore.add(ChatColor.WHITE + "💫 Revenu/heure: " + ChatColor.GREEN + String.format("%.2f $", passiveIncome));
-        passiveLore.add(ChatColor.WHITE + "📈 Basé sur: " + ChatColor.YELLOW + "Niveau " + island.getLevel());
-        passiveLore.add("");
-        passiveLore.add(ChatColor.GRAY + "Les revenus sont automatiquement");
-        passiveLore.add(ChatColor.GRAY + "ajoutés à la banque chaque heure");
+        // Actions personnalisées
+        inv.setItem(15, createItem(Material.HOPPER, ChatColor.YELLOW + "Déposer montant personnalisé",
+                ChatColor.GRAY + "Choisir le montant exact",
+                ChatColor.GRAY + "à déposer dans la banque",
+                "",
+                ChatColor.YELLOW + "Clic pour déposer"));
 
-        inv.setItem(24, createItem(Material.CLOCK, ChatColor.GREEN + "🕐 Revenus passifs", passiveLore));
+        inv.setItem(24, createItem(Material.DROPPER, ChatColor.AQUA + "Retirer montant personnalisé",
+                ChatColor.GRAY + "Choisir le montant exact",
+                ChatColor.GRAY + "à retirer de la banque",
+                "",
+                ChatColor.YELLOW + "Clic pour retirer"));
+
+        // Actions spéciales
+        inv.setItem(16, createItem(Material.CHEST, ChatColor.GOLD + "Déposer tout",
+                ChatColor.GRAY + "Déposer tous vos coins",
+                ChatColor.GRAY + "dans la banque de l'île",
+                ChatColor.GRAY + "Montant: " + ChatColor.WHITE + plugin.getPrisonTycoonHook().getCoins(player.getUniqueId()) + " coins",
+                "",
+                ChatColor.YELLOW + "Clic pour déposer tout"));
+
+        inv.setItem(25, createItem(Material.ENDER_CHEST, ChatColor.GOLD + "Retirer tout",
+                ChatColor.GRAY + "Retirer tout l'argent",
+                ChatColor.GRAY + "de la banque vers vos coins",
+                ChatColor.GRAY + "Montant: " + ChatColor.WHITE + plugin.getEconomyManager().formatMoney(bankBalance),
+                "",
+                ChatColor.YELLOW + "Clic pour retirer tout"));
+
+        // Historique des transactions (placeholder pour une future fonctionnalité)
+        inv.setItem(7, createItem(Material.BOOK, ChatColor.BLUE + "Historique des transactions",
+                ChatColor.GRAY + "Voir l'historique des",
+                ChatColor.GRAY + "dépôts et retraits",
+                "",
+                ChatColor.GRAY + "Fonctionnalité bientôt disponible"));
+
+        // Statistiques
+        inv.setItem(1, createItem(Material.CLOCK, ChatColor.AQUA + "Statistiques",
+                ChatColor.GRAY + "Revenus passifs par heure:",
+                ChatColor.WHITE + "+ " + calculateHourlyIncome(island) + " coins",
+                ChatColor.GRAY + "Basé sur le niveau de l'île",
+                "",
+                ChatColor.YELLOW + "Les revenus sont automatiques"));
 
         // Bouton retour
-        inv.setItem(22, createBackButton());
+        inv.setItem(31, createBackButton());
 
         fillEmptySlots(inv, Material.GREEN_STAINED_GLASS_PANE);
 
@@ -124,25 +140,27 @@ public class BankMenu extends BaseMenu {
         if (island == null) return;
 
         switch (slot) {
-            case 11 -> { // Déposer
+            case 31 -> openMainMenu(player); // Retour
+            case 7 -> { // Historique
+                player.sendMessage(ChatColor.YELLOW + "Historique des transactions bientôt disponible !");
+            }
+            case 15 -> { // Déposer montant personnalisé
                 player.closeInventory();
                 plugin.getEconomyManager().startBankDeposit(player, island);
             }
-            case 15 -> { // Retirer
+            case 24 -> { // Retirer montant personnalisé
                 player.closeInventory();
                 plugin.getEconomyManager().startBankWithdrawal(player, island);
             }
-            case 13 -> { // Statistiques
-                showBankStatistics(player, island);
+            case 16 -> { // Déposer tout
+                handleDepositAll(player, island);
             }
-            case 20 -> { // Actions rapides
-                openQuickActionsMenu(player, island);
+            case 25 -> { // Retirer tout
+                handleWithdrawAll(player, island);
             }
-            case 24 -> { // Revenus passifs
-                showPassiveIncomeInfo(player, island);
-            }
-            case 22 -> { // Retour
-                openMainMenu(player);
+            default -> {
+                // Gestion des montants rapides
+                handleQuickAction(player, slot, island);
             }
         }
     }
@@ -152,157 +170,122 @@ public class BankMenu extends BaseMenu {
         return "bank";
     }
 
-    private void openQuickActionsMenu(Player player, Island island) {
-        Inventory inv = createInventory(27, ChatColor.DARK_PURPLE + "Actions rapides - Banque");
+    private void handleQuickAction(Player player, int slot, Island island) {
+        List<Double> quickAmounts = List.of(100.0, 500.0, 1000.0, 5000.0);
+        int[] depositSlots = {10, 11, 12, 13};
+        int[] withdrawSlots = {19, 20, 21, 22};
 
-        double playerBalance = plugin.getEconomyManager().getBalance(player.getUniqueId());
-        double islandBank = island.getBank();
-
-        // Déposer tout
-        if (playerBalance > 0) {
-            inv.setItem(10, createItem(Material.GOLD_BLOCK, ChatColor.GOLD + "💰 Déposer tout",
-                    ChatColor.GRAY + "Déposer tout votre argent",
-                    ChatColor.GRAY + "dans la banque de l'île",
-                    "",
-                    ChatColor.WHITE + "Montant: " + ChatColor.GOLD + String.format("%.2f $", playerBalance),
-                    "",
-                    ChatColor.YELLOW + "Clic pour déposer"));
-        } else {
-            inv.setItem(10, createItem(Material.BARRIER, ChatColor.RED + "💰 Déposer tout",
-                    ChatColor.GRAY + "Vous n'avez pas d'argent",
-                    ChatColor.GRAY + "à déposer"));
-        }
-
-        // Retirer montants fixes
-        addQuickWithdrawButton(inv, 12, 1000, islandBank >= 1000);
-        addQuickWithdrawButton(inv, 14, 10000, islandBank >= 10000);
-        addQuickWithdrawButton(inv, 16, 50000, islandBank >= 50000);
-
-        // Retirer tout
-        if (islandBank > 0) {
-            inv.setItem(22, createItem(Material.DIAMOND_BLOCK, ChatColor.AQUA + "💎 Retirer tout",
-                    ChatColor.GRAY + "Retirer tout l'argent",
-                    ChatColor.GRAY + "de la banque de l'île",
-                    "",
-                    ChatColor.WHITE + "Montant: " + ChatColor.GREEN + String.format("%.2f $", islandBank),
-                    "",
-                    ChatColor.YELLOW + "Clic pour retirer"));
-        }
-
-        inv.setItem(26, createItem(Material.ARROW, ChatColor.YELLOW + "Retour",
-                ChatColor.GRAY + "Retourner au menu de la banque"));
-
-        fillEmptySlots(inv, Material.PURPLE_STAINED_GLASS_PANE);
-
-        player.openInventory(inv);
-        setPlayerMenu(player, "bank_quick");
-    }
-
-    public void handleQuickActionsClick(Player player, int slot) {
-        Island island = (Island) getMenuData(player, "island");
-        if (island == null) return;
-
-        switch (slot) {
-            case 10 -> { // Déposer tout
-                double playerBalance = plugin.getEconomyManager().getBalance(player.getUniqueId());
-                if (playerBalance > 0) {
-                    executeQuickDeposit(player, island, playerBalance);
-                }
+        // Vérifier si c'est un dépôt rapide
+        for (int i = 0; i < depositSlots.length; i++) {
+            if (slot == depositSlots[i]) {
+                double amount = quickAmounts.get(i);
+                handleQuickDeposit(player, island, amount);
+                return;
             }
-            case 12 -> executeQuickWithdraw(player, island, 1000); // Retirer 1000
-            case 14 -> executeQuickWithdraw(player, island, 10000); // Retirer 10000
-            case 16 -> executeQuickWithdraw(player, island, 50000); // Retirer 50000
-            case 22 -> executeQuickWithdraw(player, island, island.getBank()); // Retirer tout
-            case 26 -> open(player); // Retour
+        }
+
+        // Vérifier si c'est un retrait rapide
+        for (int i = 0; i < withdrawSlots.length; i++) {
+            if (slot == withdrawSlots[i]) {
+                double amount = quickAmounts.get(i);
+                handleQuickWithdraw(player, island, amount);
+                return;
+            }
         }
     }
 
-    private void addQuickWithdrawButton(Inventory inv, int slot, double amount, boolean canAfford) {
-        Material material = canAfford ? Material.EMERALD : Material.BARRIER;
-        String color = canAfford ? ChatColor.GREEN.toString() : ChatColor.RED.toString();
-        String formattedAmount = plugin.getEconomyManager().formatMoney(amount);
+    private void handleQuickDeposit(Player player, Island island, double amount) {
+        long coinsAmount = Math.round(amount);
 
-        List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.GRAY + "Retirer " + ChatColor.WHITE + formattedAmount);
-        lore.add(ChatColor.GRAY + "de la banque de l'île");
-        lore.add("");
-
-        if (canAfford) {
-            lore.add(ChatColor.YELLOW + "Clic pour retirer");
-        } else {
-            lore.add(ChatColor.RED + "Fonds insuffisants");
+        if (!plugin.getPrisonTycoonHook().hasCoins(player.getUniqueId(), coinsAmount)) {
+            player.sendMessage(ChatColor.RED + "Vous n'avez pas assez de coins !");
+            return;
         }
 
-        inv.setItem(slot, createItem(material, color + "💵 Retirer " + formattedAmount, lore));
-    }
-
-    private void executeQuickDeposit(Player player, Island island, double amount) {
-        if (plugin.getEconomyManager().hasBalance(player.getUniqueId(), amount)) {
-            plugin.getEconomyManager().removeBalance(player.getUniqueId(), amount);
+        // Effectuer la transaction via PrisonTycoon
+        if (plugin.getPrisonTycoonHook().removeCoins(player.getUniqueId(), coinsAmount)) {
             island.addToBank(amount);
             plugin.getDatabaseManager().saveIsland(island);
 
-            player.closeInventory();
-            player.sendMessage(ChatColor.GREEN + "✅ Vous avez déposé " +
-                    plugin.getEconomyManager().formatMoney(amount) +
-                    " dans la banque de l'île !");
+            player.sendMessage(ChatColor.GREEN + "Vous avez déposé " + ChatColor.GOLD +
+                    coinsAmount + " coins " + ChatColor.GREEN + "dans la banque de l'île !");
+
+            // Rafraîchir le menu
+            open(player);
         } else {
-            player.sendMessage(ChatColor.RED + "❌ Fonds insuffisants !");
+            player.sendMessage(ChatColor.RED + "Erreur lors du dépôt !");
         }
     }
 
-    private void executeQuickWithdraw(Player player, Island island, double amount) {
-        if (island.removeFromBank(amount)) {
-            plugin.getEconomyManager().addBalance(player.getUniqueId(), amount);
+    private void handleQuickWithdraw(Player player, Island island, double amount) {
+        if (!island.removeFromBank(amount)) {
+            player.sendMessage(ChatColor.RED + "Fonds insuffisants dans la banque de l'île !");
+            return;
+        }
+
+        // Donner les coins via PrisonTycoon
+        long coinsAmount = Math.round(amount);
+        plugin.getPrisonTycoonHook().removeCoins(player.getUniqueId(), coinsAmount);
+        plugin.getDatabaseManager().saveIsland(island);
+
+        player.sendMessage(ChatColor.GREEN + "Vous avez retiré " + ChatColor.GOLD +
+                coinsAmount + " coins " + ChatColor.GREEN + "de la banque de l'île !");
+
+        // Rafraîchir le menu
+        open(player);
+    }
+
+    private void handleDepositAll(Player player, Island island) {
+        long playerCoins = plugin.getPrisonTycoonHook().getCoins(player.getUniqueId());
+
+        if (playerCoins <= 0) {
+            player.sendMessage(ChatColor.RED + "Vous n'avez pas de coins à déposer !");
+            return;
+        }
+
+        if (plugin.getPrisonTycoonHook().removeCoins(player.getUniqueId(), playerCoins)) {
+            island.addToBank(playerCoins);
             plugin.getDatabaseManager().saveIsland(island);
 
-            player.closeInventory();
-            player.sendMessage(ChatColor.GREEN + "✅ Vous avez retiré " +
-                    plugin.getEconomyManager().formatMoney(amount) +
-                    " de la banque de l'île !");
+            player.sendMessage(ChatColor.GREEN + "Vous avez déposé tous vos coins (" +
+                    ChatColor.GOLD + playerCoins + ChatColor.GREEN + ") dans la banque !");
+
+            // Rafraîchir le menu
+            open(player);
         } else {
-            player.sendMessage(ChatColor.RED + "❌ Fonds insuffisants dans la banque !");
+            player.sendMessage(ChatColor.RED + "Erreur lors du dépôt !");
         }
     }
 
-    private void showBankStatistics(Player player, Island island) {
-        player.closeInventory();
+    private void handleWithdrawAll(Player player, Island island) {
+        double bankBalance = island.getBank();
 
-        player.sendMessage(ChatColor.GOLD + "=== 📊 Statistiques de la Banque ===");
-        player.sendMessage(ChatColor.AQUA + "💰 Solde actuel: " + ChatColor.WHITE + String.format("%.2f $", island.getBank()));
-        player.sendMessage(ChatColor.AQUA + "👥 Membres: " + ChatColor.WHITE + (island.getMembers().size() + 1));
-        player.sendMessage(ChatColor.AQUA + "📊 Niveau île: " + ChatColor.WHITE + island.getLevel());
-        player.sendMessage(ChatColor.AQUA + "💫 Revenus/heure: " + ChatColor.WHITE + String.format("%.2f $", calculatePassiveIncome(island)));
+        if (bankBalance <= 0) {
+            player.sendMessage(ChatColor.RED + "La banque de l'île est vide !");
+            return;
+        }
 
-        // TODO: Ajouter plus de statistiques
-        player.sendMessage("");
-        player.sendMessage(ChatColor.GRAY + "📋 Historique des transactions bientôt disponible !");
+        if (island.removeFromBank(bankBalance)) {
+            long coinsAmount = Math.round(bankBalance);
+            plugin.getPrisonTycoonHook().addCoins(player.getUniqueId(), coinsAmount);
+            plugin.getDatabaseManager().saveIsland(island);
+
+            player.sendMessage(ChatColor.GREEN + "Vous avez retiré tout l'argent de la banque (" +
+                    ChatColor.GOLD + coinsAmount + " coins" + ChatColor.GREEN + ") !");
+
+            // Rafraîchir le menu
+            open(player);
+        } else {
+            player.sendMessage(ChatColor.RED + "Erreur lors du retrait !");
+        }
     }
 
-    private void showPassiveIncomeInfo(Player player, Island island) {
-        double income = calculatePassiveIncome(island);
-        double dailyIncome = income * 24;
-
-        player.closeInventory();
-
-        player.sendMessage(ChatColor.GOLD + "=== 🕐 Revenus Passifs ===");
-        player.sendMessage(ChatColor.AQUA + "💫 Revenu par heure: " + ChatColor.WHITE + String.format("%.2f $", income));
-        player.sendMessage(ChatColor.AQUA + "📅 Revenu par jour: " + ChatColor.WHITE + String.format("%.2f $", dailyIncome));
-        player.sendMessage("");
-        player.sendMessage(ChatColor.GRAY + "💡 Comment augmenter vos revenus:");
-        player.sendMessage(ChatColor.YELLOW + "• Améliorer le niveau de votre île");
-        player.sendMessage(ChatColor.YELLOW + "• Agrandir votre île");
-        player.sendMessage(ChatColor.YELLOW + "• Rester actif sur votre île");
-    }
-
-    private double calculatePassiveIncome(Island island) {
-        // Utiliser la méthode de l'EconomyManager
+    private String calculateHourlyIncome(Island island) {
+        // Calcul basé sur le niveau de l'île (similaire à EconomyManager)
         double baseIncome = island.getLevel() * 0.5;
         double sizeMultiplier = 1.0 + (island.getSize() - 50) * 0.001;
+        double hourlyIncome = baseIncome * sizeMultiplier;
 
-        long daysSinceActivity = (System.currentTimeMillis() - island.getLastActivity()) / (24 * 60 * 60 * 1000);
-        double activityMultiplier = daysSinceActivity <= 1 ? 1.5 : (daysSinceActivity <= 7 ? 1.0 : 0.5);
-
-        return baseIncome * sizeMultiplier * activityMultiplier;
+        return String.format("%.1f", hourlyIncome);
     }
 }

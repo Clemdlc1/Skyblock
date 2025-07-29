@@ -2,19 +2,16 @@ package fr.skyblock.menus;
 
 import fr.skyblock.CustomSkyblock;
 import fr.skyblock.managers.MenuManager;
-import fr.skyblock.managers.SchematicManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 public class SchematicMenu extends BaseMenu {
-
-    private static final int ITEMS_PER_PAGE = 27; // 3 rows of 9
 
     public SchematicMenu(CustomSkyblock plugin, MenuManager menuManager) {
         super(plugin, menuManager);
@@ -22,79 +19,176 @@ public class SchematicMenu extends BaseMenu {
 
     @Override
     public void open(Player player) {
-        open(player, 1);
-    }
-
-    public void open(Player player, int page) {
-        SchematicManager schematicManager = plugin.getSchematicManager();
-        List<String> schematics = schematicManager.getAvailableSchematics();
-
-        if (schematics.isEmpty()) {
-            player.sendMessage(ChatColor.RED + "Aucun schematic n'est disponible pour le moment.");
+        // Vérifier si le joueur peut créer une île
+        if (!plugin.getPrisonTycoonHook().hasCustomPermission(player, "specialmine.free")) {
+            player.sendMessage(ChatColor.RED + "Vous devez avoir la permission " + ChatColor.AQUA + "specialmine.free" +
+                    ChatColor.RED + " ou assez de ressources pour créer une île !");
             return;
         }
 
-        int totalPages = (int) Math.ceil((double) schematics.size() / ITEMS_PER_PAGE);
-        if (page < 1) page = 1;
-        if (page > totalPages) page = totalPages;
+        Inventory inv = createInventory(45, ChatColor.DARK_BLUE + "Choisir un type d'île");
 
-        Inventory inv = createInventory(45, ChatColor.DARK_BLUE + "Choisissez un Schematic (Page " + page + "/" + totalPages + ")");
+        List<String> schematics = plugin.getSchematicManager().getAvailableSchematics();
 
-        int startIndex = (page - 1) * ITEMS_PER_PAGE;
-        int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, schematics.size());
+        int slot = 10;
+        for (String schematic : schematics) {
+            Map<String, Object> schematicData = plugin.getSchematicManager().getSchematicData(schematic);
 
-        for (int i = startIndex; i < endIndex; i++) {
-            String schematicId = schematics.get(i);
-            Map<String, Object> data = schematicManager.getSchematicData(schematicId);
+            Material displayMaterial = Material.valueOf((String) schematicData.getOrDefault("material", "GRASS_BLOCK"));
+            String displayName = (String) schematicData.getOrDefault("name", schematic);
+            List<String> description = (List<String>) schematicData.getOrDefault("description", List.of("Île standard"));
 
-            String name = (String) data.getOrDefault("name", "Schematic Inconnu");
-            Material material = Material.valueOf((String) data.getOrDefault("material", "GRASS_BLOCK"));
-            List<String> description = (List<String>) data.getOrDefault("description", List.of("Description non disponible."));
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.GRAY + "Type: " + ChatColor.WHITE + displayName);
+            lore.add("");
 
-            ItemStack item = createItem(material, ChatColor.GREEN + name, description);
-            inv.setItem(i - startIndex, item);
+            // Description du schematic
+            for (String line : description) {
+                lore.add(ChatColor.GRAY + line);
+            }
+
+            lore.add("");
+
+            // Informations spécifiques selon le type
+            addSchematicSpecificInfo(lore, schematic);
+
+            lore.add("");
+            lore.add(ChatColor.YELLOW + "Clic pour sélectionner");
+
+            inv.setItem(slot, createItem(displayMaterial, ChatColor.GREEN + displayName, lore));
+
+            slot++;
+            if (slot == 17) slot = 19; // Ligne suivante
+            if (slot >= 26) break; // Limite
         }
 
-        // Navigation
-        if (page > 1) {
-            inv.setItem(36, createPreviousPageButton());
-        }
-        inv.setItem(40, createCloseButton());
-        if (page < totalPages) {
-            inv.setItem(44, createNextPageButton());
-        }
+        // Informations générales
+        inv.setItem(4, createItem(Material.COMPASS, ChatColor.GOLD + "Création d'île",
+                ChatColor.GRAY + "Choisissez le type d'île",
+                ChatColor.GRAY + "qui vous convient le mieux",
+                "",
+                ChatColor.YELLOW + "Chaque type a ses avantages !"));
 
-        fillEmptySlots(inv, Material.GRAY_STAINED_GLASS_PANE);
+        // Recommandations
+        inv.setItem(6, createItem(Material.BOOK, ChatColor.AQUA + "Recommandations",
+                ChatColor.GRAY + "Débutant: " + ChatColor.GREEN + "Île Classique",
+                ChatColor.GRAY + "Expérimenté: " + ChatColor.YELLOW + "Île Jungle",
+                ChatColor.GRAY + "Expert: " + ChatColor.RED + "Île Champignon",
+                "",
+                ChatColor.WHITE + "Choisissez selon votre expérience !"));
+
+        // Coût de création
+        String costInfo = plugin.getPrisonTycoonHook().hasCustomPermission(player, "specialmine.free") ?
+                ChatColor.GREEN + "GRATUIT (Permission Free)" :
+                ChatColor.YELLOW + "Coût: " + plugin.getConfig().getLong("prison-tycoon.island-creation-cost", 100) + " coins";
+
+        inv.setItem(2, createItem(Material.GOLD_INGOT, ChatColor.GOLD + "Coût de création",
+                ChatColor.GRAY + "Votre statut: " + costInfo,
+                "",
+                ChatColor.GRAY + "Les joueurs avec la permission",
+                ChatColor.AQUA + "specialmine.free " + ChatColor.GRAY + "créent gratuitement"));
+
+        // Bouton annuler
+        inv.setItem(40, createItem(Material.BARRIER, ChatColor.RED + "Annuler",
+                ChatColor.GRAY + "Annuler la création d'île",
+                ChatColor.GRAY + "et retourner au menu principal"));
+
+        fillEmptySlots(inv, Material.BLUE_STAINED_GLASS_PANE);
 
         player.openInventory(inv);
         setPlayerMenu(player, getMenuType());
-        setMenuData(player, "page", page);
+    }
+
+    private void addSchematicSpecificInfo(List<String> lore, String schematic) {
+        switch (schematic.toLowerCase()) {
+            case "classic" -> {
+                lore.add(ChatColor.GREEN + "✓ Parfait pour débuter");
+                lore.add(ChatColor.GREEN + "✓ Ressources équilibrées");
+                lore.add(ChatColor.GREEN + "✓ Facile à développer");
+                lore.add(ChatColor.YELLOW + "Recommandé pour les nouveaux joueurs");
+            }
+            case "desert" -> {
+                lore.add(ChatColor.YELLOW + "• Spécialisé dans l'agriculture");
+                lore.add(ChatColor.YELLOW + "• Ressources rares du désert");
+                lore.add(ChatColor.RED + "⚠ Gestion de l'eau importante");
+                lore.add(ChatColor.AQUA + "Idéal pour les farms");
+            }
+            case "jungle" -> {
+                lore.add(ChatColor.GREEN + "✓ Ressources exotiques");
+                lore.add(ChatColor.GREEN + "✓ Croissance rapide");
+                lore.add(ChatColor.YELLOW + "• Plus de défis");
+                lore.add(ChatColor.GOLD + "Pour les joueurs expérimentés");
+            }
+            case "snow" -> {
+                lore.add(ChatColor.AQUA + "• Thème hivernal unique");
+                lore.add(ChatColor.AQUA + "• Ressources arctiques");
+                lore.add(ChatColor.YELLOW + "• Défis de survie");
+                lore.add(ChatColor.WHITE + "Ambiance froide et paisible");
+            }
+            case "mushroom" -> {
+                lore.add(ChatColor.LIGHT_PURPLE + "✦ Très rare et unique");
+                lore.add(ChatColor.LIGHT_PURPLE + "✦ Ressources mystiques");
+                lore.add(ChatColor.RED + "⚠ Très difficile");
+                lore.add(ChatColor.GOLD + "Pour les maîtres de Skyblock");
+            }
+            case "nether" -> {
+                lore.add(ChatColor.RED + "🔥 Thème infernal");
+                lore.add(ChatColor.RED + "🔥 Ressources du Nether");
+                lore.add(ChatColor.DARK_RED + "⚠ Extrêmement dangereux");
+                lore.add(ChatColor.GOLD + "Challenge ultime");
+            }
+        }
     }
 
     @Override
     public void handleClick(Player player, int slot) {
-        int page = (int) getMenuData(player, "page");
-        SchematicManager schematicManager = plugin.getSchematicManager();
-        List<String> schematics = schematicManager.getAvailableSchematics();
-
-        if (slot >= 0 && slot < ITEMS_PER_PAGE) {
-            int index = (page - 1) * ITEMS_PER_PAGE + slot;
-            if (index < schematics.size()) {
-                String schematicId = schematics.get(index);
+        switch (slot) {
+            case 40 -> { // Annuler
                 player.closeInventory();
-                schematicManager.createIslandWithSchematic(player, schematicId);
+                player.sendMessage(ChatColor.YELLOW + "Création d'île annulée.");
             }
-        } else if (slot == 36) { // Page précédente
-            open(player, page - 1);
-        } else if (slot == 40) { // Fermer
-            player.closeInventory();
-        } else if (slot == 44) { // Page suivante
-            open(player, page + 1);
+            default -> {
+                // Clic sur un schematic
+                List<String> schematics = plugin.getSchematicManager().getAvailableSchematics();
+                int schematicIndex = calculateSchematicIndex(slot);
+
+                if (schematicIndex >= 0 && schematicIndex < schematics.size()) {
+                    String selectedSchematic = schematics.get(schematicIndex);
+
+                    // Vérification finale avant création
+                    if (!plugin.getPrisonTycoonHook().hasCustomPermission(player, "specialmine.free")) {
+                        player.sendMessage(ChatColor.RED + "Vous n'avez plus la permission de créer une île !");
+                        player.closeInventory();
+                        return;
+                    }
+
+                    player.closeInventory();
+
+                    // Message de confirmation
+                    String schematicName = (String) plugin.getSchematicManager().getSchematicData(selectedSchematic).get("name");
+                    player.sendMessage(ChatColor.YELLOW + "Création de votre île " + ChatColor.GREEN + schematicName +
+                            ChatColor.YELLOW + " en cours...");
+                    player.sendMessage(ChatColor.GRAY + "Cela peut prendre quelques secondes...");
+
+                    // Créer l'île
+                    plugin.getSchematicManager().createIslandWithSchematic(player, selectedSchematic);
+                }
+            }
         }
     }
 
     @Override
     public String getMenuType() {
         return "schematic";
+    }
+
+    private int calculateSchematicIndex(int slot) {
+        // Calcul basé sur la disposition: ligne 1 (slots 10-16), ligne 2 (19-25)
+        if (slot >= 10 && slot <= 16) {
+            return slot - 10;
+        } else if (slot >= 19 && slot <= 25) {
+            return (slot - 19) + 7;
+        }
+        return -1;
     }
 }

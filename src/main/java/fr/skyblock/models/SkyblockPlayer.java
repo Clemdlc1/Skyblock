@@ -1,10 +1,14 @@
 package fr.skyblock.models;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.*;
 
 public class SkyblockPlayer {
+
+    private static final Gson gson = new GsonBuilder().create();
 
     private UUID uuid;
     private String name;
@@ -52,63 +56,12 @@ public class SkyblockPlayer {
         this.lastSeen = System.currentTimeMillis();
     }
 
-    // Sauvegarde et chargement YAML
-    public void saveToYaml(ConfigurationSection section) {
-        section.set("uuid", uuid.toString());
-        section.set("name", name);
-        section.set("island-id", islandId != null ? islandId.toString() : null);
-        section.set("has-island", hasIsland);
-        section.set("first-join", firstJoin);
-        section.set("last-seen", lastSeen);
-        section.set("island-resets", islandResets);
-
-        // Sauvegarde des îles dont il est membre
-        List<String> memberOfList = new ArrayList<>();
-        for (UUID id : memberOfIslands) {
-            memberOfList.add(id.toString());
-        }
-        section.set("member-of-islands", memberOfList);
-
-        // Sauvegarde des données supplémentaires
-        if (!data.isEmpty()) {
-            ConfigurationSection dataSection = section.createSection("data");
-            for (Map.Entry<String, Object> entry : data.entrySet()) {
-                dataSection.set(entry.getKey(), entry.getValue());
-            }
-        }
+    public String toJson() {
+        return gson.toJson(this);
     }
 
-    public static SkyblockPlayer loadFromYaml(ConfigurationSection section) {
-        UUID uuid = UUID.fromString(section.getString("uuid"));
-        String name = section.getString("name");
-
-        SkyblockPlayer player = new SkyblockPlayer(uuid, name);
-
-        String islandIdStr = section.getString("island-id");
-        if (islandIdStr != null) {
-            player.islandId = UUID.fromString(islandIdStr);
-        }
-
-        player.hasIsland = section.getBoolean("has-island", false);
-        player.firstJoin = section.getLong("first-join", System.currentTimeMillis());
-        player.lastSeen = section.getLong("last-seen", System.currentTimeMillis());
-        player.islandResets = section.getInt("island-resets", 0);
-
-        // Chargement des îles dont il est membre
-        List<String> memberOfList = section.getStringList("member-of-islands");
-        for (String idStr : memberOfList) {
-            player.memberOfIslands.add(UUID.fromString(idStr));
-        }
-
-        // Chargement des données supplémentaires
-        ConfigurationSection dataSection = section.getConfigurationSection("data");
-        if (dataSection != null) {
-            for (String key : dataSection.getKeys(false)) {
-                player.data.put(key, dataSection.get(key));
-            }
-        }
-
-        return player;
+    public static SkyblockPlayer fromJson(String json) {
+        return gson.fromJson(json, SkyblockPlayer.class);
     }
 
     // Getters et Setters

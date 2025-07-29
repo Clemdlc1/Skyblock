@@ -173,8 +173,8 @@ public class SchematicManager {
 
                     // Donner des récompenses de départ
                     if (plugin.getPrisonTycoonHook().isEnabled()) {
-                        plugin.getPrisonTycoonHook().rewardTokens(player, 10, "Création d'île");
-                        plugin.getPrisonTycoonHook().rewardBeacons(player, 5, "Création d'île");
+                        plugin.getPrisonTycoonHook().addTokens(player.getUniqueId(), 10);
+                        plugin.getPrisonTycoonHook().addBeacons(player.getUniqueId(), 5);
                     } else {
                         plugin.getEconomyManager().rewardPlayer(player.getUniqueId(), 100.0, "Création d'île");
                     }

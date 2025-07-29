@@ -43,33 +43,40 @@ public class MembersMenu extends BaseMenu {
                     ChatColor.GRAY + "Inviter un nouveau membre",
                     ChatColor.GRAY + "à rejoindre votre île",
                     "",
-                    ChatColor.YELLOW + "Utilisez: /island invite <joueur>"));
+                    ChatColor.YELLOW + "Utilisez /island invite <joueur>"));
 
-            inv.setItem(22, createItem(Material.WRITTEN_BOOK, ChatColor.AQUA + "Invitations en attente",
+            inv.setItem(22, createItem(Material.BOOK, ChatColor.AQUA + "Invitations en attente",
                     ChatColor.GRAY + "Voir les invitations que",
                     ChatColor.GRAY + "vous avez envoyées",
                     "",
                     ChatColor.YELLOW + "Clic pour voir"));
         }
 
+        // Statistiques
+        int totalMembers = island.getMembers().size() + 1; // +1 pour le propriétaire
+        int maxMembers = plugin.getConfig().getInt("advanced.max-members-per-island", 10);
+
+        inv.setItem(13, createItem(Material.EMERALD, ChatColor.GOLD + "Statistiques de l'île",
+                ChatColor.GRAY + "Membres: " + ChatColor.WHITE + totalMembers + "/" + maxMembers,
+                ChatColor.GRAY + "Visiteurs actuels: " + ChatColor.WHITE + island.getVisitors().size(),
+                ChatColor.GRAY + "Propriétaire: " + ChatColor.WHITE + getPlayerName(island.getOwner()),
+                "",
+                ChatColor.AQUA + "Informations générales"));
+
         // Liste des membres
-        int slot = 9;
-        int maxMembersShown = 35;
+        int slot = 28;
 
         // Propriétaire
         Player owner = Bukkit.getPlayer(island.getOwner());
-        String ownerName = owner != null ? owner.getName() : getPlayerNameFromUUID(island.getOwner());
+        String ownerName = getPlayerName(island.getOwner());
         boolean ownerOnline = owner != null && owner.isOnline();
 
-        List<String> ownerLore = new ArrayList<>();
-        ownerLore.add(ChatColor.GRAY + "Statut: " + (ownerOnline ? ChatColor.GREEN + "En ligne" : ChatColor.RED + "Hors ligne"));
-        ownerLore.add(ChatColor.GRAY + "Rôle: " + ChatColor.GOLD + "Propriétaire");
-        ownerLore.add("");
-        ownerLore.add(ChatColor.GRAY + "Le propriétaire de l'île");
-        ownerLore.add(ChatColor.GRAY + "a tous les droits.");
-
-        ItemStack ownerHead = createPlayerHead(ownerName,
-                ChatColor.GOLD + "👑 " + ownerName + " (Propriétaire)", ownerLore);
+        ItemStack ownerHead = createPlayerHead(ownerName, ChatColor.GOLD + ownerName + " (Propriétaire)",
+                ChatColor.GRAY + "Statut: " + (ownerOnline ? ChatColor.GREEN + "En ligne" : ChatColor.RED + "Hors ligne"),
+                ChatColor.GRAY + "Rôle: " + ChatColor.GOLD + "Propriétaire",
+                ChatColor.GRAY + "Depuis: " + ChatColor.WHITE + formatDate(island.getCreationTime()),
+                "",
+                ChatColor.YELLOW + "Le chef de cette île");
         inv.setItem(slot++, ownerHead);
 
         // Membres
@@ -77,46 +84,57 @@ public class MembersMenu extends BaseMenu {
             if (slot >= 44) break; // Limite d'affichage
 
             Player member = Bukkit.getPlayer(memberUuid);
-            String memberName = member != null ? member.getName() : getPlayerNameFromUUID(memberUuid);
+            String memberName = getPlayerName(memberUuid);
             boolean isOnline = member != null && member.isOnline();
 
-            List<String> memberLore = new ArrayList<>();
-            memberLore.add(ChatColor.GRAY + "Statut: " + (isOnline ? ChatColor.GREEN + "En ligne" : ChatColor.RED + "Hors ligne"));
-            memberLore.add(ChatColor.GRAY + "Rôle: " + ChatColor.AQUA + "Membre");
-            memberLore.add("");
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.GRAY + "Statut: " + (isOnline ? ChatColor.GREEN + "En ligne" : ChatColor.RED + "Hors ligne"));
+            lore.add(ChatColor.GRAY + "Rôle: " + ChatColor.AQUA + "Membre");
 
-            if (island.getOwner().equals(player.getUniqueId())) {
-                memberLore.add(ChatColor.RED + "Clic pour expulser");
-                memberLore.add(ChatColor.GRAY + "Clic droit pour plus d'options");
-            } else {
-                memberLore.add(ChatColor.GRAY + "Membre de l'île");
+            SkyblockPlayer memberData = plugin.getDatabaseManager().loadPlayer(memberUuid);
+            if (memberData != null) {
+                lore.add(ChatColor.GRAY + "Dernière connexion: " + ChatColor.WHITE + formatDate(memberData.getLastSeen()));
             }
 
-            ItemStack memberHead = createPlayerHead(memberName,
-                    ChatColor.AQUA + memberName, memberLore);
+            lore.add("");
 
+            if (island.getOwner().equals(player.getUniqueId())) {
+                lore.add(ChatColor.RED + "Clic pour expulser");
+            } else {
+                lore.add(ChatColor.GRAY + "Membre de l'île");
+            }
+
+            ItemStack memberHead = createPlayerHead(memberName, ChatColor.AQUA + memberName, lore);
             inv.setItem(slot++, memberHead);
         }
 
-        // Informations générales
-        inv.setItem(45, createItem(Material.BOOK, ChatColor.YELLOW + "Informations",
-                ChatColor.GRAY + "Membres totaux: " + ChatColor.WHITE + (island.getMembers().size() + 1),
-                ChatColor.GRAY + "Limite: " + ChatColor.WHITE + "10", // TODO: Configurable
-                ChatColor.GRAY + "Propriétaire: " + ChatColor.WHITE + ownerName));
+        // Remplir les slots vides avec des têtes de joueurs fantômes
+        while (slot < 44) {
+            inv.setItem(slot, createItem(Material.LIGHT_GRAY_STAINED_GLASS_PANE, ChatColor.GRAY + "Slot libre",
+                    ChatColor.DARK_GRAY + "Invitez plus de joueurs",
+                    ChatColor.DARK_GRAY + "pour remplir votre île !"));
+            slot++;
+        }
 
-        // Statistiques des membres
-        long membersOnline = island.getMembers().stream()
-                .map(Bukkit::getPlayer)
-                .mapToLong(p -> p != null && p.isOnline() ? 1 : 0)
-                .sum();
-        if (owner != null && owner.isOnline()) membersOnline++;
+        // Boutons de navigation
+        if (island.getOwner().equals(player.getUniqueId())) {
+            inv.setItem(45, createItem(Material.REDSTONE, ChatColor.RED + "Expulser tous les visiteurs",
+                    ChatColor.GRAY + "Faire partir tous les",
+                    ChatColor.GRAY + "visiteurs actuels de l'île",
+                    "",
+                    ChatColor.YELLOW + "Clic pour expulser"));
+        }
 
-        inv.setItem(46, createItem(Material.EMERALD, ChatColor.GREEN + "Membres en ligne",
-                ChatColor.GRAY + "Actuellement: " + ChatColor.WHITE + membersOnline,
-                ChatColor.GRAY + "Total: " + ChatColor.WHITE + (island.getMembers().size() + 1)));
-
-        // Bouton retour
         inv.setItem(49, createBackButton());
+
+        // Bouton quitter l'île (pour les membres)
+        if (!island.getOwner().equals(player.getUniqueId()) && island.isMember(player.getUniqueId())) {
+            inv.setItem(53, createItem(Material.BARRIER, ChatColor.RED + "Quitter l'île",
+                    ChatColor.GRAY + "Quitter cette île et",
+                    ChatColor.GRAY + "retourner au spawn",
+                    "",
+                    ChatColor.RED + "Clic pour quitter"));
+        }
 
         fillEmptySlots(inv, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
 
@@ -143,11 +161,22 @@ public class MembersMenu extends BaseMenu {
                     showPendingInvitations(player);
                 }
             }
+            case 45 -> { // Expulser visiteurs
+                if (island.getOwner().equals(player.getUniqueId())) {
+                    expelAllVisitors(player, island);
+                }
+            }
             case 49 -> openMainMenu(player); // Retour
+            case 53 -> { // Quitter l'île
+                if (!island.getOwner().equals(player.getUniqueId()) && island.isMember(player.getUniqueId())) {
+                    player.closeInventory();
+                    player.performCommand("island leave");
+                }
+            }
             default -> {
-                // Clic sur un membre
-                if (slot >= 9 && slot < 44) {
-                    handleMemberClick(player, slot, island);
+                // Gestion des clics sur les membres
+                if (slot >= 28 && slot < 44 && island.getOwner().equals(player.getUniqueId())) {
+                    handleMemberClick(player, slot - 28, island);
                 }
             }
         }
@@ -158,163 +187,75 @@ public class MembersMenu extends BaseMenu {
         return "members";
     }
 
-    private void handleMemberClick(Player player, int slot, Island island) {
-        // Calculer quel membre a été cliqué
-        int memberIndex = slot - 10; // -10 car le propriétaire est au slot 9
+    private void handleMemberClick(Player player, int memberIndex, Island island) {
+        // Le premier slot (index 0) est le propriétaire, ne pas permettre l'expulsion
+        if (memberIndex == 0) return;
 
-        if (memberIndex < 0) return; // C'est le propriétaire
+        // Ajuster l'index pour les membres (retirer 1 car le propriétaire occupe le premier slot)
+        int realMemberIndex = memberIndex - 1;
 
-        if (memberIndex >= island.getMembers().size()) return; // Hors limites
+        List<UUID> members = new ArrayList<>(island.getMembers());
+        if (realMemberIndex >= 0 && realMemberIndex < members.size()) {
+            UUID memberToKick = members.get(realMemberIndex);
+            String memberName = getPlayerName(memberToKick);
 
-        // Trouver le membre cliqué
-        UUID memberUuid = island.getMembers().toArray(new UUID[0])[memberIndex];
-
-        if (!island.getOwner().equals(player.getUniqueId())) {
-            // Pas le propriétaire, juste afficher les infos
-            showMemberInfo(player, memberUuid);
-            return;
-        }
-
-        // Propriétaire - ouvrir menu d'actions
-        openMemberActionsMenu(player, memberUuid, island);
-    }
-
-    private void openMemberActionsMenu(Player player, UUID memberUuid, Island island) {
-        Player member = Bukkit.getPlayer(memberUuid);
-        String memberName = member != null ? member.getName() : getPlayerNameFromUUID(memberUuid);
-
-        Inventory inv = createInventory(27, ChatColor.DARK_RED + "Actions - " + memberName);
-
-        // Informations du membre
-        inv.setItem(4, createPlayerHead(memberName, ChatColor.AQUA + memberName,
-                ChatColor.GRAY + "Statut: " + (member != null && member.isOnline() ?
-                        ChatColor.GREEN + "En ligne" : ChatColor.RED + "Hors ligne"),
-                ChatColor.GRAY + "Membre depuis: " + ChatColor.WHITE + "TODO", // TODO: Date d'ajout
-                "",
-                ChatColor.YELLOW + "Choisissez une action"));
-
-        // Actions disponibles
-        inv.setItem(11, createItem(Material.RED_DYE, ChatColor.RED + "Expulser",
-                ChatColor.GRAY + "Retirer ce joueur de l'île",
-                ChatColor.GRAY + "Il perdra tous ses droits",
-                "",
-                ChatColor.RED + "Cette action est irréversible !",
-                "",
-                ChatColor.YELLOW + "Clic pour expulser"));
-
-        inv.setItem(13, createItem(Material.ENDER_PEARL, ChatColor.BLUE + "Téléporter à lui",
-                ChatColor.GRAY + "Se téléporter à la position",
-                ChatColor.GRAY + "de ce membre",
-                "",
-                ChatColor.YELLOW + "Clic pour se téléporter"));
-
-        inv.setItem(15, createItem(Material.PAPER, ChatColor.GREEN + "Envoyer un message",
-                ChatColor.GRAY + "Envoyer un message privé",
-                ChatColor.GRAY + "à ce membre",
-                "",
-                ChatColor.YELLOW + "Clic pour envoyer"));
-
-        // Boutons de navigation
-        inv.setItem(22, createItem(Material.ARROW, ChatColor.YELLOW + "Retour",
-                ChatColor.GRAY + "Retourner à la liste des membres"));
-
-        fillEmptySlots(inv, Material.GRAY_STAINED_GLASS_PANE);
-
-        player.openInventory(inv);
-        setPlayerMenu(player, "member_actions");
-        setMenuData(player, "member_uuid", memberUuid);
-        setMenuData(player, "island", island);
-    }
-
-    public void handleMemberActionsClick(Player player, int slot) {
-        UUID memberUuid = (UUID) getMenuData(player, "member_uuid");
-        Island island = (Island) getMenuData(player, "island");
-
-        if (memberUuid == null || island == null) return;
-
-        switch (slot) {
-            case 11 -> { // Expulser
-                handleKickMember(player, memberUuid, island);
-            }
-            case 13 -> { // Téléporter
-                handleTeleportToMember(player, memberUuid);
-            }
-            case 15 -> { // Message
-                handleSendMessage(player, memberUuid);
-            }
-            case 22 -> { // Retour
-                open(player);
-            }
-        }
-    }
-
-    private void handleKickMember(Player player, UUID memberUuid, Island island) {
-        Player member = Bukkit.getPlayer(memberUuid);
-        String memberName = member != null ? member.getName() : getPlayerNameFromUUID(memberUuid);
-
-        if (plugin.getIslandManager().removeMember(island, memberUuid)) {
             player.closeInventory();
-            player.sendMessage(ChatColor.GREEN + memberName + " a été expulsé de l'île !");
 
-            if (member != null && member.isOnline()) {
-                member.sendMessage(ChatColor.RED + "Vous avez été expulsé de l'île de " + player.getName() + " !");
-            }
-
-            // Notifier les autres membres
-            for (UUID otherMember : island.getMembers()) {
-                Player otherPlayer = Bukkit.getPlayer(otherMember);
-                if (otherPlayer != null && otherPlayer.isOnline() && !otherPlayer.equals(player)) {
-                    otherPlayer.sendMessage(ChatColor.YELLOW + memberName + " a été expulsé de l'île.");
-                }
-            }
-        } else {
-            player.sendMessage(ChatColor.RED + "Impossible d'expulser ce joueur !");
+            // Confirmation avant expulsion
+            player.sendMessage(ChatColor.YELLOW + "Êtes-vous sûr de vouloir expulser " + ChatColor.AQUA + memberName + ChatColor.YELLOW + " ?");
+            player.sendMessage(ChatColor.GRAY + "Tapez " + ChatColor.GREEN + "/island kick " + memberName + ChatColor.GRAY + " pour confirmer.");
         }
-    }
-
-    private void handleTeleportToMember(Player player, UUID memberUuid) {
-        Player member = Bukkit.getPlayer(memberUuid);
-        if (member == null || !member.isOnline()) {
-            player.sendMessage(ChatColor.RED + "Ce joueur n'est pas en ligne !");
-            return;
-        }
-
-        player.closeInventory();
-        player.teleport(member.getLocation());
-        player.sendMessage(ChatColor.GREEN + "Téléporté à " + member.getName() + " !");
-    }
-
-    private void handleSendMessage(Player player, UUID memberUuid) {
-        Player member = Bukkit.getPlayer(memberUuid);
-        if (member == null || !member.isOnline()) {
-            player.sendMessage(ChatColor.RED + "Ce joueur n'est pas en ligne !");
-            return;
-        }
-
-        player.closeInventory();
-        player.sendMessage(ChatColor.YELLOW + "Utilisez " + ChatColor.GOLD + "/msg " + member.getName() + " <message>" +
-                ChatColor.YELLOW + " pour lui envoyer un message !");
-    }
-
-    private void showMemberInfo(Player player, UUID memberUuid) {
-        Player member = Bukkit.getPlayer(memberUuid);
-        String memberName = member != null ? member.getName() : getPlayerNameFromUUID(memberUuid);
-
-        player.sendMessage(ChatColor.AQUA + "=== Informations de " + memberName + " ===");
-        player.sendMessage(ChatColor.GRAY + "Statut: " + (member != null && member.isOnline() ?
-                ChatColor.GREEN + "En ligne" : ChatColor.RED + "Hors ligne"));
-        player.sendMessage(ChatColor.GRAY + "Rôle: " + ChatColor.AQUA + "Membre");
-        // TODO: Ajouter plus d'informations (date d'ajout, activité, etc.)
     }
 
     private void showPendingInvitations(Player player) {
         // TODO: Implémenter l'affichage des invitations en attente
-        player.sendMessage(ChatColor.YELLOW + "Fonctionnalité des invitations en attente en cours de développement...");
-        player.sendMessage(ChatColor.GRAY + "Utilisez /island invite <joueur> pour inviter des joueurs.");
+        player.sendMessage(ChatColor.YELLOW + "Fonctionnalité en cours de développement...");
+        player.sendMessage(ChatColor.GRAY + "Vous pourrez bientôt voir toutes vos invitations en attente ici.");
     }
 
-    private String getPlayerNameFromUUID(UUID playerUuid) {
+    private void expelAllVisitors(Player player, Island island) {
+        int expelled = 0;
+
+        for (UUID visitorUuid : new ArrayList<>(island.getVisitors())) {
+            Player visitor = Bukkit.getPlayer(visitorUuid);
+            if (visitor != null && visitor.isOnline()) {
+                // Téléporter le visiteur au spawn
+                visitor.teleport(Bukkit.getWorlds().get(0).getSpawnLocation());
+                visitor.sendMessage(ChatColor.RED + "Vous avez été expulsé de l'île de " + player.getName() + " !");
+                expelled++;
+            }
+            island.removeVisitor(visitorUuid);
+        }
+
+        plugin.getDatabaseManager().saveIsland(island);
+
+        player.sendMessage(ChatColor.GREEN + "Vous avez expulsé " + expelled + " visiteur(s) de votre île !");
+
+        // Rafraîchir le menu
+        open(player);
+    }
+
+    private String getPlayerName(UUID playerUuid) {
+        Player player = Bukkit.getPlayer(playerUuid);
+        if (player != null) {
+            return player.getName();
+        }
+
         SkyblockPlayer skyblockPlayer = plugin.getDatabaseManager().loadPlayer(playerUuid);
         return skyblockPlayer != null ? skyblockPlayer.getName() : "Joueur inconnu";
+    }
+
+    private String formatDate(long timestamp) {
+        long daysSince = (System.currentTimeMillis() - timestamp) / (24 * 60 * 60 * 1000);
+        if (daysSince == 0) {
+            return "Aujourd'hui";
+        } else if (daysSince == 1) {
+            return "Hier";
+        } else if (daysSince < 30) {
+            return "Il y a " + daysSince + " jours";
+        } else {
+            long monthsSince = daysSince / 30;
+            return "Il y a " + monthsSince + " mois";
+        }
     }
 }
