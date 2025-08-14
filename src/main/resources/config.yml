@@ -1,6 +1,14 @@
 # Configuration du plugin CustomSkyblock
 # Redémarrage requis après modification
 
+# Configuration de la base de données PostgreSQL
+database:
+  host: "localhost"
+  port: 5432
+  database: "prisontycoon"
+  username: "user"
+  password: "password"
+
 # Configuration des îles
 island:
   # Taille par défaut des nouvelles îles
@@ -17,6 +25,8 @@ island:
 
   # Préfixe des mondes d'îles
   world-prefix: "island_"
+  # Dossier où stocker physiquement les mondes d'îles (sera créé sous le dossier de worlds du serveur)
+  worlds-folder: "islands"
 
   # Flags par défaut pour les nouvelles îles
   default-flags:
@@ -250,6 +260,9 @@ advanced:
 
   # Nettoyage automatique des mondes orphelins au démarrage
   cleanup-orphaned-worlds: true
+
+  # Déchargement auto des mondes d'îles après X minutes d'inactivité
+  auto-unload-minutes: 15
 
   # Sécurité des warps
   warp-safety-check: true

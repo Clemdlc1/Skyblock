@@ -145,8 +145,20 @@ public class Island {
     public Set<UUID> getMembers() { return new HashSet<>(members); }
     public Set<UUID> getVisitors() { return new HashSet<>(visitors); }
     public Map<IslandFlag, Boolean> getFlags() { return new HashMap<>(flags); }
-    public void setFlag(IslandFlag flag, boolean value) { flags.put(flag, value); }
-    public boolean getFlag(IslandFlag flag) { return flags.getOrDefault(flag, false); }
+    public void setFlag(IslandFlag flag, boolean value) {
+        if (flags == null) {
+            flags = new HashMap<>();
+            initializeDefaultFlags();
+        }
+        flags.put(flag, value);
+    }
+    public boolean getFlag(IslandFlag flag) {
+        if (flags == null) {
+            flags = new HashMap<>();
+            initializeDefaultFlags();
+        }
+        return flags.getOrDefault(flag, false);
+    }
     public long getCreationTime() { return creationTime; }
     public long getLastActivity() { return lastActivity; }
     public void setLastActivity(long lastActivity) { this.lastActivity = lastActivity; }

@@ -39,6 +39,13 @@ public final class CustomSkyblock extends JavaPlugin {
         saveDefaultConfig();
         loadConfig();
 
+        // Vérification de Multiverse Core AVANT d'initialiser les managers qui en dépendent
+        if (!setupMultiverse()) {
+            getLogger().severe("Multiverse Core non trouvé ! Le plugin se désactive.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
         // Initialisation des managers
         this.databaseManager = new DatabaseManager(this);
         this.economyManager = new EconomyManager(this);
@@ -49,14 +56,6 @@ public final class CustomSkyblock extends JavaPlugin {
         this.menuManager = new MenuManager(this);
         this.warpManager = new WarpManager(this);
         this.prisonTycoonHook = new PrisonTycoonHook(this);
-
-
-        // Vérification de Multiverse Core
-        if (!setupMultiverse()) {
-            getLogger().severe("Multiverse Core non trouvé ! Le plugin se désactive.");
-            getServer().getPluginManager().disablePlugin(this);
-            return;
-        }
 
         // Vérification du hook PrisonTycoon
         if (!prisonTycoonHook.isEnabled()) {

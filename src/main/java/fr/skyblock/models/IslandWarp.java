@@ -61,6 +61,7 @@ public class IslandWarp {
         float yaw = (float) section.getDouble("location.yaw");
         float pitch = (float) section.getDouble("location.pitch");
 
+        // Le monde peut être déchargé; on gardera temporairement un monde null ici.
         Location location = new Location(org.bukkit.Bukkit.getWorld(worldName), x, y, z, yaw, pitch);
 
         IslandWarp warp = new IslandWarp(id, islandId, name, description, location);

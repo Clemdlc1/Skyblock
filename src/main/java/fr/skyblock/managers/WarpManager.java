@@ -181,8 +181,26 @@ public class WarpManager {
             return false;
         }
 
+        // S'assurer que le monde de l'île est chargé avant de téléporter
+        plugin.getIslandManager().ensureIslandWorldLoaded(island);
+
+        // Recomposer la Location avec le monde (si rechargé)
+        Location target = warp.getLocation();
+        if (target.getWorld() == null || plugin.getIslandManager().getIslandWorld(island) == null
+                || !plugin.getIslandManager().getIslandWorld(island).equals(target.getWorld())) {
+            // Remapper sur le monde d'île actuel
+            target = new Location(
+                    plugin.getIslandManager().getIslandWorld(island),
+                    warp.getLocation().getX(),
+                    warp.getLocation().getY(),
+                    warp.getLocation().getZ(),
+                    warp.getLocation().getYaw(),
+                    warp.getLocation().getPitch()
+            );
+        }
+
         // Téléporter
-        player.teleport(warp.getLocation());
+        player.teleport(target);
         warp.incrementVisits();
         saveWarp(warp);
 

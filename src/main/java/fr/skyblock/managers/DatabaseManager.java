@@ -61,6 +61,7 @@ public class DatabaseManager {
                 "name VARCHAR(255) NOT NULL," +
                 "level INT DEFAULT 0," +
                 "bank DOUBLE PRECISION DEFAULT 0," +
+                "size INT DEFAULT 50," +
                 "center_world VARCHAR(255)," +
                 "center_x DOUBLE PRECISION," +
                 "center_y DOUBLE PRECISION," +
@@ -68,19 +69,45 @@ public class DatabaseManager {
                 "center_yaw REAL," +
                 "center_pitch REAL," +
                 "members TEXT," +
+                "flags TEXT," +
+                "creation_time BIGINT DEFAULT 0," +
                 "last_activity BIGINT DEFAULT 0" +
                 ");";
+
+        // CORRECTION : Supprimer l'ancienne contrainte si elle existe et recréer correctement
+        String dropOldConstraint = "ALTER TABLE IF EXISTS skyblock_players DROP CONSTRAINT IF EXISTS skyblock_players_island_id_fkey;";
 
         String playersTable = "CREATE TABLE IF NOT EXISTS skyblock_players (" +
                 "uuid VARCHAR(36) PRIMARY KEY," +
                 "name VARCHAR(16) NOT NULL," +
                 "island_id VARCHAR(36)," +
-                "FOREIGN KEY (island_id) REFERENCES islands(id) ON DELETE SET NULL" +
+                "first_join BIGINT DEFAULT 0," +
+                "last_seen BIGINT DEFAULT 0," +
+                "island_resets INT DEFAULT 0," +
+                "member_of_islands TEXT," +
+                "player_data TEXT" +
                 ");";
+
+        // CORRECTION : Contrainte de clé étrangère corrigée pointant vers 'islands'
+        String addForeignKey = "ALTER TABLE skyblock_players ADD CONSTRAINT skyblock_players_island_id_fkey " +
+                "FOREIGN KEY (island_id) REFERENCES islands(id) ON DELETE SET NULL;";
 
         try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute(islandsTable);
+            stmt.execute(dropOldConstraint); // Supprimer l'ancienne contrainte incorrecte
             stmt.execute(playersTable);
+
+            // Vérifier si la contrainte existe avant de l'ajouter
+            String checkConstraint = "SELECT constraint_name FROM information_schema.table_constraints " +
+                    "WHERE table_name = 'skyblock_players' AND constraint_name = 'skyblock_players_island_id_fkey'";
+
+            ResultSet rs = stmt.executeQuery(checkConstraint);
+            if (!rs.next()) {
+                stmt.execute(addForeignKey);
+                plugin.getLogger().info("Contrainte de clé étrangère créée correctement");
+            }
+            rs.close();
+
         } catch (SQLException e) {
             plugin.getLogger().severe("Could not create tables: " + e.getMessage());
         }
@@ -90,12 +117,14 @@ public class DatabaseManager {
 
     public void saveIsland(Island island) {
         islandsCache.put(island.getId(), island);
-        String query = "INSERT INTO islands (id, owner_uuid, name, level, bank, center_world, center_x, center_y, center_z, center_yaw, center_pitch, members, last_activity) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+
+        String query = "INSERT INTO islands (id, owner_uuid, name, level, bank, size, center_world, center_x, center_y, center_z, center_yaw, center_pitch, members, flags, creation_time, last_activity) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
                 "ON CONFLICT (id) DO UPDATE SET " +
-                "owner_uuid = EXCLUDED.owner_uuid, name = EXCLUDED.name, level = EXCLUDED.level, bank = EXCLUDED.bank, center_world = EXCLUDED.center_world, " +
-                "center_x = EXCLUDED.center_x, center_y = EXCLUDED.center_y, center_z = EXCLUDED.center_z, center_yaw = EXCLUDED.center_yaw, " +
-                "center_pitch = EXCLUDED.center_pitch, members = EXCLUDED.members, last_activity = EXCLUDED.last_activity";
+                "owner_uuid = EXCLUDED.owner_uuid, name = EXCLUDED.name, level = EXCLUDED.level, bank = EXCLUDED.bank, size = EXCLUDED.size, " +
+                "center_world = EXCLUDED.center_world, center_x = EXCLUDED.center_x, center_y = EXCLUDED.center_y, center_z = EXCLUDED.center_z, " +
+                "center_yaw = EXCLUDED.center_yaw, center_pitch = EXCLUDED.center_pitch, members = EXCLUDED.members, flags = EXCLUDED.flags, " +
+                "creation_time = EXCLUDED.creation_time, last_activity = EXCLUDED.last_activity";
 
         try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, island.getId().toString());
@@ -103,30 +132,36 @@ public class DatabaseManager {
             ps.setString(3, island.getName());
             ps.setInt(4, island.getLevel());
             ps.setDouble(5, island.getBank());
+            ps.setInt(6, island.getSize());
 
             Location center = island.getCenter();
             if (center != null && center.getWorld() != null) {
-                ps.setString(6, center.getWorld().getName());
-                ps.setDouble(7, center.getX());
-                ps.setDouble(8, center.getY());
-                ps.setDouble(9, center.getZ());
-                ps.setFloat(10, center.getYaw());
-                ps.setFloat(11, center.getPitch());
+                ps.setString(7, center.getWorld().getName());
+                ps.setDouble(8, center.getX());
+                ps.setDouble(9, center.getY());
+                ps.setDouble(10, center.getZ());
+                ps.setFloat(11, center.getYaw());
+                ps.setFloat(12, center.getPitch());
             } else {
-                ps.setNull(6, Types.VARCHAR);
-                ps.setNull(7, Types.DOUBLE);
+                ps.setNull(7, Types.VARCHAR);
                 ps.setNull(8, Types.DOUBLE);
                 ps.setNull(9, Types.DOUBLE);
-                ps.setNull(10, Types.FLOAT);
+                ps.setNull(10, Types.DOUBLE);
                 ps.setNull(11, Types.FLOAT);
+                ps.setNull(12, Types.FLOAT);
             }
 
-            ps.setString(12, gson.toJson(island.getMembers()));
-            ps.setLong(13, island.getLastActivity());
+            ps.setString(13, gson.toJson(island.getMembers()));
+            ps.setString(14, gson.toJson(island.getFlags()));
+            ps.setLong(15, island.getCreationTime());
+            ps.setLong(16, island.getLastActivity());
 
             ps.executeUpdate();
+            plugin.getLogger().info("Île sauvegardée: " + island.getId());
+
         } catch (SQLException e) {
             plugin.getLogger().severe("Error saving island " + island.getId() + ": " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -134,6 +169,7 @@ public class DatabaseManager {
         if (islandsCache.containsKey(islandId)) {
             return islandsCache.get(islandId);
         }
+
         String query = "SELECT * FROM islands WHERE id = ?";
         try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, islandId.toString());
@@ -149,7 +185,6 @@ public class DatabaseManager {
         return null;
     }
 
-    // RÉINTÉGRÉ
     public void deleteIsland(UUID islandId) {
         islandsCache.remove(islandId);
         String query = "DELETE FROM islands WHERE id = ?";
@@ -176,8 +211,14 @@ public class DatabaseManager {
 
     public void savePlayer(SkyblockPlayer player) {
         playersCache.put(player.getUuid(), player);
-        String query = "INSERT INTO skyblock_players (uuid, name, island_id) VALUES (?, ?, ?) " +
-                "ON CONFLICT (uuid) DO UPDATE SET name = EXCLUDED.name, island_id = EXCLUDED.island_id";
+
+        String query = "INSERT INTO skyblock_players (uuid, name, island_id, first_join, last_seen, island_resets, member_of_islands, player_data) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
+                "ON CONFLICT (uuid) DO UPDATE SET " +
+                "name = EXCLUDED.name, island_id = EXCLUDED.island_id, first_join = EXCLUDED.first_join, " +
+                "last_seen = EXCLUDED.last_seen, island_resets = EXCLUDED.island_resets, " +
+                "member_of_islands = EXCLUDED.member_of_islands, player_data = EXCLUDED.player_data";
+
         try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, player.getUuid().toString());
             ps.setString(2, player.getName());
@@ -188,9 +229,18 @@ public class DatabaseManager {
                 ps.setNull(3, Types.VARCHAR);
             }
 
+            ps.setLong(4, player.getFirstJoin());
+            ps.setLong(5, player.getLastSeen());
+            ps.setInt(6, player.getIslandResets());
+            ps.setString(7, gson.toJson(player.getMemberOfIslands()));
+            ps.setString(8, gson.toJson(player.getData()));
+
             ps.executeUpdate();
+            plugin.getLogger().info("Joueur sauvegardé: " + player.getName());
+
         } catch (SQLException e) {
             plugin.getLogger().severe("Error saving player " + player.getUuid() + ": " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -198,6 +248,7 @@ public class DatabaseManager {
         if (playersCache.containsKey(playerUuid)) {
             return playersCache.get(playerUuid);
         }
+
         String query = "SELECT * FROM skyblock_players WHERE uuid = ?";
         try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, playerUuid.toString());
@@ -241,7 +292,9 @@ public class DatabaseManager {
     private void loadAll() {
         plugin.getLogger().info("Loading all islands from database...");
         String islandQuery = "SELECT * FROM islands";
-        try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(islandQuery); ResultSet rs = ps.executeQuery()) {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(islandQuery);
+             ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 Island island = mapResultSetToIsland(rs);
                 islandsCache.put(island.getId(), island);
@@ -253,7 +306,9 @@ public class DatabaseManager {
 
         plugin.getLogger().info("Loading all players from database...");
         String playerQuery = "SELECT * FROM skyblock_players";
-        try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(playerQuery); ResultSet rs = ps.executeQuery()) {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(playerQuery);
+             ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 SkyblockPlayer player = mapResultSetToPlayer(rs);
                 playersCache.put(player.getUuid(), player);
@@ -264,13 +319,11 @@ public class DatabaseManager {
         plugin.getLogger().info(playersCache.size() + " players loaded!");
     }
 
-    // RÉINTÉGRÉ
     public void clearCache() {
         islandsCache.clear();
         playersCache.clear();
     }
 
-    // RÉINTÉGRÉ
     public void reloadFromDisk() {
         plugin.getLogger().info("Reloading all data from database...");
         clearCache();
@@ -280,7 +333,6 @@ public class DatabaseManager {
 
     // --- Méthodes de Statistiques et de Recherche ---
 
-    // RÉINTÉGRÉ
     public List<Island> getInactiveIslands(long inactiveDays) {
         List<Island> islands = new ArrayList<>();
         long threshold = System.currentTimeMillis() - (inactiveDays * 24 * 60 * 60 * 1000);
@@ -297,7 +349,6 @@ public class DatabaseManager {
         return islands;
     }
 
-    // RÉINTÉGRÉ
     public List<Island> getIslandsByLevel(int minLevel) {
         List<Island> islands = new ArrayList<>();
         String query = "SELECT * FROM islands WHERE level >= ? ORDER BY level DESC";
@@ -313,7 +364,6 @@ public class DatabaseManager {
         return islands;
     }
 
-    // RÉINTÉGRÉ
     public List<Island> getTopIslandsByLevel(int limit) {
         List<Island> islands = new ArrayList<>();
         String query = "SELECT * FROM islands ORDER BY level DESC LIMIT ?";
@@ -329,10 +379,11 @@ public class DatabaseManager {
         return islands;
     }
 
-    // RÉINTÉGRÉ
     public int getTotalIslands() {
         String query = "SELECT COUNT(*) FROM islands";
-        try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(query); ResultSet rs = ps.executeQuery()) {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query);
+             ResultSet rs = ps.executeQuery()) {
             if (rs.next()) {
                 return rs.getInt(1);
             }
@@ -342,10 +393,11 @@ public class DatabaseManager {
         return 0;
     }
 
-    // RÉINTÉGRÉ
     public int getTotalPlayers() {
         String query = "SELECT COUNT(*) FROM skyblock_players";
-        try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(query); ResultSet rs = ps.executeQuery()) {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query);
+             ResultSet rs = ps.executeQuery()) {
             if (rs.next()) {
                 return rs.getInt(1);
             }
@@ -355,7 +407,6 @@ public class DatabaseManager {
         return 0;
     }
 
-    // RÉINTÉGRÉ
     public int getActiveIslands(long activeDays) {
         long threshold = System.currentTimeMillis() - (activeDays * 24 * 60 * 60 * 1000);
         String query = "SELECT COUNT(*) FROM islands WHERE last_activity >= ?";
@@ -406,14 +457,26 @@ public class DatabaseManager {
 
         island.setLevel(rs.getInt("level"));
         island.setBank(rs.getDouble("bank"));
+        island.setSize(rs.getInt("size"));
         island.setLastActivity(rs.getLong("last_activity"));
 
+        // Charger les membres
         String membersJson = rs.getString("members");
-        if(membersJson != null && !membersJson.isEmpty()){
+        if (membersJson != null && !membersJson.isEmpty()) {
             Type memberListType = new TypeToken<Set<UUID>>() {}.getType();
             Set<UUID> members = gson.fromJson(membersJson, memberListType);
-            if(members != null) {
+            if (members != null) {
                 members.forEach(island::addMember);
+            }
+        }
+
+        // Charger les flags
+        String flagsJson = rs.getString("flags");
+        if (flagsJson != null && !flagsJson.isEmpty()) {
+            Type flagsType = new TypeToken<Map<Island.IslandFlag, Boolean>>() {}.getType();
+            Map<Island.IslandFlag, Boolean> flags = gson.fromJson(flagsJson, flagsType);
+            if (flags != null) {
+                flags.forEach(island::setFlag);
             }
         }
 
@@ -431,6 +494,35 @@ public class DatabaseManager {
             player.createIsland(UUID.fromString(islandIdStr));
         }
 
+        player.setFirstJoin(rs.getLong("first_join"));
+        player.setLastSeen(rs.getLong("last_seen"));
+        player.setIslandResets(rs.getInt("island_resets"));
+
+        // Charger member_of_islands
+        String memberOfIslandsJson = rs.getString("member_of_islands");
+        if (memberOfIslandsJson != null && !memberOfIslandsJson.isEmpty()) {
+            Type memberOfIslandsType = new TypeToken<Set<UUID>>() {}.getType();
+            Set<UUID> memberOfIslands = gson.fromJson(memberOfIslandsJson, memberOfIslandsType);
+            if (memberOfIslands != null) {
+                memberOfIslands.forEach(player::joinIsland);
+            }
+        }
+
+        // Charger player_data
+        String playerDataJson = rs.getString("player_data");
+        if (playerDataJson != null && !playerDataJson.isEmpty()) {
+            Type playerDataType = new TypeToken<Map<String, Object>>() {}.getType();
+            Map<String, Object> playerData = gson.fromJson(playerDataJson, playerDataType);
+            if (playerData != null) {
+                playerData.forEach(player::setData);
+            }
+        }
+
         return player;
+    }
+
+    // Getters pour les données manquantes dans SkyblockPlayer
+    public Map<String, Object> getData(SkyblockPlayer player) {
+        return player.getData();
     }
 }

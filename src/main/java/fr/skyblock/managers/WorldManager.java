@@ -2,12 +2,8 @@ package fr.skyblock.managers;
 
 import fr.skyblock.CustomSkyblock;
 import fr.skyblock.models.Island;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.WorldType;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.mvplugins.multiverse.core.locale.message.Message;
 import org.mvplugins.multiverse.core.utils.result.Attempt;
 import org.mvplugins.multiverse.core.world.LoadedMultiverseWorld;
@@ -29,35 +25,68 @@ public class WorldManager {
     private final CustomSkyblock plugin;
     private final Map<UUID, String> islandWorlds = new ConcurrentHashMap<>();
     private final String worldPrefix = "island_";
+    // Sous-dossier pour stocker physiquement les mondes d'îles (ex: islands/island_<uuid>)
+    private final String islandsFolder;
+    // Suivi d'activité et déchargement
+    private final Map<String, Long> lastPlayerLeftAt = new ConcurrentHashMap<>();
+    private final long unloadAfterMillis;
 
     public WorldManager(CustomSkyblock plugin) {
         this.plugin = plugin;
+        this.islandsFolder = plugin.getConfig().getString("island.worlds-folder", "islands");
+        int minutes = plugin.getConfig().getInt("advanced.auto-unload-minutes", 15);
+        this.unloadAfterMillis = Math.max(1, minutes) * 60L * 1000L;
+        ensureIslandsFolder();
         loadExistingWorlds();
+        unloadIdleIslandWorldsOnStartup();
+        startAutoUnloadTask();
+    }
+
+    private void ensureIslandsFolder() {
+        File folder = new File(Bukkit.getWorldContainer(), islandsFolder);
+        if (!folder.exists() && !folder.mkdirs()) {
+            plugin.getLogger().warning("Impossible de créer le dossier des îles: " + folder.getAbsolutePath());
+        }
     }
 
     /**
      * Crée un nouveau monde pour une île
      */
     public World createIslandWorld(Island island) {
-        String worldName = worldPrefix + island.getId().toString();
+        String worldName = islandsFolder + "/" + worldPrefix + island.getId().toString();
 
         try {
             org.mvplugins.multiverse.core.world.@NotNull WorldManager mvWorldManager = plugin.getMultiverseCoreApi().getWorldManager();
 
+            // CORRECTION : Configuration améliorée pour éviter les erreurs de génération
             CreateWorldOptions options = CreateWorldOptions.worldName(worldName)
                     .environment(World.Environment.NORMAL)
                     .worldType(WorldType.FLAT)
                     .generateStructures(false)
-                    .generator("VoidWorldGenerator");
+                    .seed(0L); // Seed fixe pour éviter les erreurs
+
+            // CORRECTION : Essayer avec un générateur par défaut d'abord
+            String voidGenerator = plugin.getConfig().getString("advanced.void-generator", "VoidWorldGenerator");
+
+            // Vérifier si le générateur existe
+            if (plugin.getServer().getPluginManager().getPlugin(voidGenerator) != null) {
+                options = options.generator(voidGenerator);
+                plugin.getLogger().info("Utilisation du générateur: " + voidGenerator);
+            } else {
+                plugin.getLogger().warning("Générateur " + voidGenerator + " non trouvé, utilisation du générateur par défaut");
+                // Utiliser un générateur plat personnalisé
+                options = options.generatorSettings("3;minecraft:air;127;");
+            }
 
             Attempt<LoadedMultiverseWorld, CreateFailureReason> result = mvWorldManager.createWorld(options);
 
             if (result.isFailure()) {
                 Message failureMessage = result.getFailureMessage();
+                plugin.getLogger().severe("Échec de création du monde " + worldName + ": " + failureMessage);
                 return null;
             }
 
-            // CORRECTION : Utiliser get() pour récupérer la valeur en cas de succès.
+            // Récupérer le monde créé
             LoadedMultiverseWorld loadedWorld = result.get();
             World world = loadedWorld.getBukkitWorld().getOrNull();
 
@@ -66,11 +95,24 @@ public class WorldManager {
                 return null;
             }
 
+            // CORRECTION : Configuration du monde améliorée
             setupWorldSettings(world);
             islandWorlds.put(island.getId(), worldName);
+
+            // Mettre à jour la location du centre avec le vrai monde
             Location newCenter = new Location(world, 0, 64, 0);
             island.setCenter(newCenter);
-            plugin.getLogger().info("Monde créé pour l'île " + island.getId() + " : " + worldName);
+
+            plugin.getLogger().info("Monde créé avec succès pour l'île " + island.getId() + " : " + worldName);
+
+            // CORRECTION : Nettoyer le terrain et préparer le spawn
+            prepareWorldForIsland(world);
+
+            // Désactiver l'auto-load pour ce monde dans Multiverse
+            try {
+                mvWorldManager.getWorld(world.getName()).peek(mvWorld -> mvWorld.setAutoLoad(false));
+            } catch (Exception ignored) {
+            }
 
             return world;
 
@@ -112,7 +154,7 @@ public class WorldManager {
                 loadedWorld.getBukkitWorld().peek(bukkitWorld -> {
                     // Maintenant nous avons l'objet World de Bukkit et nous pouvons appeler getPlayers()
                     for (Player player : bukkitWorld.getPlayers()) {
-                        Location spawnLocation = Bukkit.getWorlds().get(0).getSpawnLocation();
+                        Location spawnLocation = Bukkit.getWorlds().getFirst().getSpawnLocation();
                         player.teleport(spawnLocation);
                         player.sendMessage("§cVous avez été téléporté car le monde de l'île a été supprimé.");
                     }
@@ -130,6 +172,7 @@ public class WorldManager {
                 return true;
             } else {
                 Message failureMessage = result.getFailureMessage();
+                plugin.getLogger().severe("Échec de suppression du monde " + worldName + " : " + failureMessage);
                 return false;
             }
         } catch (Exception e) {
@@ -161,7 +204,7 @@ public class WorldManager {
      * Vérifie si un monde appartient à une île
      */
     public boolean isIslandWorld(String worldName) {
-        return worldName.startsWith(worldPrefix);
+        return worldName.startsWith(islandsFolder + "/" + worldPrefix) || worldName.startsWith(worldPrefix);
     }
 
     /**
@@ -173,40 +216,13 @@ public class WorldManager {
         }
 
         try {
-            String uuidString = worldName.substring(worldPrefix.length());
+            String plain = worldName.contains("/") ? worldName.substring(worldName.lastIndexOf('/') + 1) : worldName;
+            String uuidString = plain.substring(worldPrefix.length());
             return UUID.fromString(uuidString);
         } catch (IllegalArgumentException e) {
             plugin.getLogger().warning("Nom de monde d'île invalide : " + worldName);
             return null;
         }
-    }
-
-    /**
-     * Configure les paramètres d'un monde d'île
-     */
-    private void setupWorldSettings(World world) {
-        // Paramètres de base
-        world.setDifficulty(org.bukkit.Difficulty.NORMAL);
-        world.setSpawnLocation(0, 64, 0);
-        world.setKeepSpawnInMemory(false);
-        world.setAutoSave(true);
-
-        // Règles de jeu
-        world.setGameRule(org.bukkit.GameRule.DO_DAYLIGHT_CYCLE, true);
-        world.setGameRule(org.bukkit.GameRule.DO_WEATHER_CYCLE, true);
-        world.setGameRule(org.bukkit.GameRule.KEEP_INVENTORY, false);
-        world.setGameRule(org.bukkit.GameRule.MOB_GRIEFING, false);
-        world.setGameRule(org.bukkit.GameRule.DO_FIRE_TICK, true);
-        world.setGameRule(org.bukkit.GameRule.RANDOM_TICK_SPEED, 3);
-
-        // World border par défaut
-        org.bukkit.WorldBorder border = world.getWorldBorder();
-        border.setCenter(0, 0);
-        border.setSize(100); // Taille par défaut
-        border.setWarningDistance(5);
-        border.setWarningTime(15);
-        border.setDamageAmount(0.2);
-        border.setDamageBuffer(5);
     }
 
     /**
@@ -246,7 +262,9 @@ public class WorldManager {
                     UUID islandId = getIslandIdFromWorldName(worldName);
                     if (islandId != null) {
                         islandWorlds.put(islandId, worldName);
-                        plugin.getLogger().info("Monde d'île Multiverse chargé : " + worldName + " -> " + islandId);
+                        // Désactiver l'autoload pour ne pas charger au démarrage
+                        mvWorld.setAutoLoad(false);
+                        plugin.getLogger().info("Monde d'île référencé (autoload off) : " + worldName + " -> " + islandId);
                     }
                 }
             }
@@ -337,9 +355,166 @@ public class WorldManager {
      */
     public World getOrCreateIslandWorld(Island island) {
         World world = getIslandWorld(island);
-        if (world == null) {
-            world = createIslandWorld(island);
+        if (world != null) return world;
+
+        // Si un dossier de monde existe, tenter import/chargement via Multiverse plutôt que recréer
+        String worldName = islandsFolder + "/" + worldPrefix + island.getId();
+        try {
+            org.mvplugins.multiverse.core.world.@NotNull WorldManager mvWorldManager = plugin.getMultiverseCoreApi().getWorldManager();
+            Option<MultiverseWorld> mvWorldOpt = mvWorldManager.getWorld(worldName);
+            if (mvWorldOpt.isDefined()) {
+                // Charger si déchargé
+                Attempt<org.mvplugins.multiverse.core.world.LoadedMultiverseWorld, org.mvplugins.multiverse.core.world.reasons.LoadFailureReason> loadAttempt =
+                        mvWorldManager.loadWorld(mvWorldOpt.get());
+                if (loadAttempt.isFailure()) {
+                    plugin.getLogger().warning("Échec du chargement du monde existant " + worldName + " : " + loadAttempt.getFailureMessage());
+                }
+            } else {
+                // Importer un monde existant si le dossier existe
+                File folder = new File(Bukkit.getWorldContainer(), worldName);
+                if (folder.exists()) {
+                    Attempt<org.mvplugins.multiverse.core.world.LoadedMultiverseWorld, org.mvplugins.multiverse.core.world.reasons.ImportFailureReason> importAttempt =
+                            mvWorldManager.importWorld(org.mvplugins.multiverse.core.world.options.ImportWorldOptions.worldName(worldName));
+                    if (importAttempt.isFailure()) {
+                        plugin.getLogger().warning("Échec de l'import du monde existant " + worldName + " : " + importAttempt.getFailureMessage());
+                    }
+                } else {
+                    // Créer si aucun dossier
+                    createIslandWorld(island);
+                }
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Erreur lors de la (re)mise à disposition du monde d'île: " + e.getMessage());
         }
-        return world;
+
+        return getIslandWorld(island);
+    }
+
+    /**
+     * Configure les paramètres d'un monde d'île
+     */
+    private void setupWorldSettings(World world) {
+        // Paramètres de base
+        world.setDifficulty(org.bukkit.Difficulty.NORMAL);
+        world.setSpawnLocation(0, 64, 0);
+        world.setKeepSpawnInMemory(false);
+        world.setAutoSave(true);
+
+        // Règles de jeu
+        world.setGameRule(org.bukkit.GameRule.DO_DAYLIGHT_CYCLE, true);
+        world.setGameRule(org.bukkit.GameRule.DO_WEATHER_CYCLE, true);
+        world.setGameRule(org.bukkit.GameRule.KEEP_INVENTORY, false);
+        world.setGameRule(org.bukkit.GameRule.MOB_GRIEFING, false);
+        world.setGameRule(org.bukkit.GameRule.DO_FIRE_TICK, true);
+        world.setGameRule(org.bukkit.GameRule.RANDOM_TICK_SPEED, 3);
+
+        // CORRECTION : Désactiver les spawns naturels pour éviter les problèmes
+        world.setGameRule(org.bukkit.GameRule.DO_MOB_SPAWNING, false);
+        world.setGameRule(org.bukkit.GameRule.SPAWN_RADIUS, 0);
+
+        // World border par défaut
+        org.bukkit.WorldBorder border = world.getWorldBorder();
+        border.setCenter(0, 0);
+        border.setSize(100); // Taille par défaut
+        border.setWarningDistance(5);
+        border.setWarningTime(15);
+        border.setDamageAmount(0.2);
+        border.setDamageBuffer(5);
+
+        plugin.getLogger().info("Configuration du monde terminée: " + world.getName());
+    }
+
+    /**
+     * AJOUT : Prépare le monde pour l'île en créant une plateforme de base
+     */
+    private void prepareWorldForIsland(World world) {
+        try {
+            // Créer une petite plateforme de bedrock pour éviter les problèmes de spawn
+            for (int x = -2; x <= 2; x++) {
+                for (int z = -2; z <= 2; z++) {
+                    world.getBlockAt(x, 63, z).setType(Material.BEDROCK);
+                }
+            }
+
+            // Placer un bloc de spawn sécurisé
+            world.getBlockAt(0, 64, 0).setType(Material.STONE);
+
+            plugin.getLogger().info("Plateforme de base créée pour le monde: " + world.getName());
+
+        } catch (Exception e) {
+            plugin.getLogger().warning("Impossible de créer la plateforme de base: " + e.getMessage());
+        }
+    }
+
+    // ==== Gestion du déchargement automatique ====
+
+    public void markPlayerLeft(String worldName) {
+        if (isIslandWorld(worldName)) {
+            lastPlayerLeftAt.put(worldName, System.currentTimeMillis());
+        }
+    }
+
+    public void markPlayerEntered(String worldName) {
+        if (isIslandWorld(worldName)) {
+            lastPlayerLeftAt.remove(worldName);
+        }
+    }
+
+    private void startAutoUnloadTask() {
+        // Vérifie toutes les minutes et décharge les mondes d'îles inactifs depuis 15 minutes
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            try {
+                org.mvplugins.multiverse.core.world.@NotNull WorldManager mvWorldManager = plugin.getMultiverseCoreApi().getWorldManager();
+                long now = System.currentTimeMillis();
+                for (Map.Entry<UUID, String> entry : islandWorlds.entrySet()) {
+                    String worldName = entry.getValue();
+                    World bukkitWorld = Bukkit.getWorld(worldName);
+                    if (bukkitWorld == null) continue; // déjà déchargé
+                    if (!bukkitWorld.getPlayers().isEmpty()) continue; // encore utilisé
+
+                    long last = lastPlayerLeftAt.getOrDefault(worldName, now);
+                    // si pas de timestamp, initialise maintenant pour laisser 15min
+                    if (!lastPlayerLeftAt.containsKey(worldName)) {
+                        lastPlayerLeftAt.put(worldName, now);
+                        continue;
+                    }
+
+                    if (now - last >= unloadAfterMillis) {
+                        // Décharger via Multiverse (sauvegarde true)
+                        mvWorldManager.getLoadedWorld(bukkitWorld).peek(loaded -> {
+                            mvWorldManager.unloadWorld(org.mvplugins.multiverse.core.world.options.UnloadWorldOptions
+                                    .world(loaded)
+                                    .saveBukkitWorld(true)
+                                    .unloadBukkitWorld(true));
+                            plugin.getLogger().info("Monde d'île déchargé pour inactivité: " + worldName);
+                        });
+                        lastPlayerLeftAt.remove(worldName);
+                    }
+                }
+            } catch (Exception e) {
+                plugin.getLogger().warning("Erreur tâche déchargement auto: " + e.getMessage());
+            }
+        }, 20L * 60L, 20L * 60L);
+    }
+
+    private void unloadIdleIslandWorldsOnStartup() {
+        try {
+            org.mvplugins.multiverse.core.world.@NotNull WorldManager mvWorldManager = plugin.getMultiverseCoreApi().getWorldManager();
+            for (World world : Bukkit.getWorlds()) {
+                String worldName = world.getName();
+                if (!isIslandWorld(worldName)) continue;
+                if (!world.getPlayers().isEmpty()) continue;
+
+                mvWorldManager.getLoadedWorld(world).peek(loaded -> {
+                    mvWorldManager.unloadWorld(org.mvplugins.multiverse.core.world.options.UnloadWorldOptions
+                            .world(loaded)
+                            .saveBukkitWorld(true)
+                            .unloadBukkitWorld(true));
+                    plugin.getLogger().info("Monde d'île déchargé au démarrage (sans joueurs): " + worldName);
+                });
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Erreur lors du déchargement initial des mondes d'îles: " + e.getMessage());
+        }
     }
 }

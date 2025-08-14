@@ -72,8 +72,11 @@ public class SkyblockPlayer {
     public boolean hasIsland() { return hasIsland; }
     public Set<UUID> getMemberOfIslands() { return new HashSet<>(memberOfIslands); }
     public long getFirstJoin() { return firstJoin; }
+    public void setFirstJoin(long firstJoin) { this.firstJoin = firstJoin; }
     public long getLastSeen() { return lastSeen; }
+    public void setLastSeen(long lastSeen) { this.lastSeen = lastSeen; }
     public int getIslandResets() { return islandResets; }
+    public void setIslandResets(int islandResets) { this.islandResets = islandResets; }
 
     // Gestion des données supplémentaires
     public void setData(String key, Object value) {
@@ -98,5 +101,10 @@ public class SkyblockPlayer {
 
     public void removeData(String key) {
         data.remove(key);
+    }
+
+    // AJOUT : Getter pour toutes les données
+    public Map<String, Object> getData() {
+        return new HashMap<>(data);
     }
 }

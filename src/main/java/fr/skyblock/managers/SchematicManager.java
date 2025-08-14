@@ -153,15 +153,17 @@ public class SchematicManager {
             return null;
         }
 
-        // La location de l'île est maintenant mise à jour par le WorldManager
+        // CORRECTION : Sauvegarder l'île EN PREMIER avant le joueur
+        plugin.getDatabaseManager().saveIsland(island);
+        plugin.getLogger().info("Île sauvegardée avant mise à jour du joueur : " + island.getId());
+
+        // Maintenant mettre à jour le joueur
+        skyblockPlayer.createIsland(islandId);
+        plugin.getDatabaseManager().savePlayer(skyblockPlayer);
+        plugin.getLogger().info("Joueur mis à jour avec l'île : " + player.getName());
 
         // Générer l'île avec le schematic
         generateIslandFromSchematic(island, schematic, player);
-
-        // Sauvegarder
-        plugin.getDatabaseManager().saveIsland(island);
-        skyblockPlayer.createIsland(islandId);
-        plugin.getDatabaseManager().savePlayer(skyblockPlayer);
 
         // Téléporter le joueur
         new BukkitRunnable() {
@@ -175,12 +177,16 @@ public class SchematicManager {
                     if (plugin.getPrisonTycoonHook().isEnabled()) {
                         plugin.getPrisonTycoonHook().addTokens(player.getUniqueId(), 10);
                         plugin.getPrisonTycoonHook().addBeacons(player.getUniqueId(), 5);
+                        player.sendMessage(ChatColor.LIGHT_PURPLE + "Récompenses reçues: 10 tokens, 5 beacons !");
                     } else {
                         plugin.getEconomyManager().rewardPlayer(player.getUniqueId(), 100.0, "Création d'île");
+                        player.sendMessage(ChatColor.GOLD + "Récompense reçue: 100$ !");
                     }
+                } else {
+                    player.sendMessage(ChatColor.RED + "Erreur lors de la téléportation ! Utilisez /is home");
                 }
             }
-        }.runTaskLater(plugin, 10L);
+        }.runTaskLater(plugin, 20L); // Attendre 1 seconde
 
         return island;
     }

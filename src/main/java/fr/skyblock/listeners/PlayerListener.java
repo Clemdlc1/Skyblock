@@ -98,10 +98,18 @@ public class PlayerListener implements Listener {
             Island island = plugin.getIslandManager().getIslandFromWorld(to.getWorld());
             if (island != null) {
                 handleIslandEntry(player, island);
+                plugin.getWorldManager().markPlayerEntered(to.getWorld().getName());
             }
         } else {
             playersInSkyblockWorld.remove(player.getUniqueId());
             resetWorldBorder(player);
+            // Si le monde quitté est un monde d'île et qu'il n'a plus de joueurs, marquer le départ
+            Location from = event.getFrom();
+            if (from != null && from.getWorld() != null && plugin.getIslandManager().isIslandWorld(from.getWorld())) {
+                if (from.getWorld().getPlayers().size() <= 1) { // le joueur qui part était le dernier
+                    plugin.getWorldManager().markPlayerLeft(from.getWorld().getName());
+                }
+            }
         }
     }
 
@@ -123,9 +131,15 @@ public class PlayerListener implements Listener {
 
             if (fromIsland != null) {
                 handleIslandExit(player, fromIsland);
+                if (from.getWorld() != null && from.getWorld().getPlayers().size() <= 1) {
+                    plugin.getWorldManager().markPlayerLeft(from.getWorld().getName());
+                }
             }
             if (toIsland != null) {
                 handleIslandEntry(player, toIsland);
+                if (to.getWorld() != null) {
+                    plugin.getWorldManager().markPlayerEntered(to.getWorld().getName());
+                }
             } else if (!toIslandWorld) {
                 // Joueur quitte tous les mondes d'îles
                 resetWorldBorder(player);

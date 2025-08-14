@@ -100,6 +100,7 @@ public class IslandManager {
 
         // Téléportation
         player.teleport(teleportLocation);
+        plugin.getWorldManager().markPlayerEntered(world.getName());
         island.updateActivity();
         plugin.getDatabaseManager().saveIsland(island);
 
@@ -287,6 +288,10 @@ public class IslandManager {
      */
     public World ensureIslandWorldLoaded(Island island) {
         return plugin.getWorldManager().getOrCreateIslandWorld(island);
+    }
+
+    public World getIslandWorld(Island island) {
+        return plugin.getWorldManager().getIslandWorld(island);
     }
 
     /**
