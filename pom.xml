@@ -72,7 +72,12 @@
             <version>1.21.8-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
-
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.13.1</version>
+            <scope>compile</scope>
+        </dependency>
         <dependency>
             <groupId>org.mvplugins.multiverse.core</groupId>
             <artifactId>multiverse-core</artifactId>
@@ -80,12 +85,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <dependency>
-            <groupId>fr.prisontycoon</groupId> <!-- Doit correspondre au groupId de PrisonTycoon -->
-            <artifactId>PrisonTycoon</artifactId> <!-- Doit correspondre à l'artifactId de PrisonTycoon -->
-            <version>0.1</version> <!-- La version de votre PrisonTycoon -->
-            <scope>provided</scope>
-        </dependency>
+
 
         <!-- PostgreSQL Driver -->
         <dependency>
@@ -95,19 +95,19 @@
             <scope>compile</scope>
         </dependency>
 
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.13.1</version>
-            <scope>compile</scope>
-        </dependency>
-
         <!-- HikariCP for connection pooling -->
         <dependency>
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
             <version>7.0.0</version>
             <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>fr.prisontycoon</groupId> <!-- Doit correspondre au groupId de PrisonTycoon -->
+            <artifactId>PrisonTycoon</artifactId> <!-- Doit correspondre à l'artifactId de PrisonTycoon -->
+            <version>0.1</version> <!-- La version de votre PrisonTycoon -->
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>
