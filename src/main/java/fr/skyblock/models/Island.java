@@ -23,6 +23,19 @@ public class Island {
     private Map<IslandFlag, Boolean> flags;
     private long creationTime;
     private long lastActivity;
+    
+    // Améliorations d'île pour le système d'imprimantes
+    private int maxDepositBoxes = 1;
+    private int maxHoppers = 5;
+    private double hopperTransferSpeed = 1.0;
+    private int maxPrinters = 10;
+    private double printerGenerationSpeed = 1.0;
+    
+    // Caisses de dépôt de l'île
+    private final Map<String, DepositBoxData> depositBoxes = new HashMap<>();
+    
+    // Imprimantes de l'île
+    private final Map<String, PrinterData> printers = new HashMap<>();
 
     public enum IslandFlag {
         PVP("Autoriser le PvP"),
@@ -160,6 +173,159 @@ public class Island {
         return flags.getOrDefault(flag, false);
     }
     public long getCreationTime() { return creationTime; }
-    public long getLastActivity() { return lastActivity; }
-    public void setLastActivity(long lastActivity) { this.lastActivity = lastActivity; }
+    public long getLastActivity() {
+        return lastActivity;
+    }
+
+    public void setLastActivity(long lastActivity) {
+        this.lastActivity = lastActivity;
+    }
+
+    // ==================== AMÉLIORATIONS D'ÎLE ====================
+
+    public int getMaxDepositBoxes() {
+        return maxDepositBoxes;
+    }
+
+    public void setMaxDepositBoxes(int maxDepositBoxes) {
+        this.maxDepositBoxes = Math.max(1, maxDepositBoxes);
+    }
+
+    public int getMaxHoppers() {
+        return maxHoppers;
+    }
+
+    public void setMaxHoppers(int maxHoppers) {
+        this.maxHoppers = Math.max(5, maxHoppers);
+    }
+
+    public double getHopperTransferSpeed() {
+        return hopperTransferSpeed;
+    }
+
+    public void setHopperTransferSpeed(double hopperTransferSpeed) {
+        this.hopperTransferSpeed = Math.max(1.0, hopperTransferSpeed);
+    }
+
+    public int getMaxPrinters() {
+        return maxPrinters;
+    }
+
+    public void setMaxPrinters(int maxPrinters) {
+        this.maxPrinters = Math.max(10, maxPrinters);
+    }
+
+    public double getPrinterGenerationSpeed() {
+        return printerGenerationSpeed;
+    }
+
+    public void setPrinterGenerationSpeed(double printerGenerationSpeed) {
+        this.printerGenerationSpeed = Math.max(1.0, printerGenerationSpeed);
+    }
+    
+    // ==================== GESTION DES CAISSES DE DÉPÔT ====================
+    
+    /**
+     * Ajoute une caisse de dépôt à l'île
+     */
+    public void addDepositBox(DepositBoxData depositBox) {
+        depositBoxes.put(depositBox.getId(), depositBox);
+    }
+    
+    /**
+     * Supprime une caisse de dépôt de l'île
+     */
+    public void removeDepositBox(String depositBoxId) {
+        depositBoxes.remove(depositBoxId);
+    }
+    
+    /**
+     * Obtient une caisse de dépôt par son ID
+     */
+    public DepositBoxData getDepositBox(String depositBoxId) {
+        return depositBoxes.get(depositBoxId);
+    }
+    
+    /**
+     * Obtient toutes les caisses de dépôt de l'île
+     */
+    public Map<String, DepositBoxData> getDepositBoxes() {
+        return new HashMap<>(depositBoxes);
+    }
+    
+    /**
+     * Obtient le nombre de caisses de dépôt sur l'île
+     */
+    public int getDepositBoxCount() {
+        return depositBoxes.size();
+    }
+    
+    /**
+     * Vérifie si on peut placer une caisse de dépôt sur l'île
+     */
+    public boolean canPlaceDepositBox() {
+        return depositBoxes.size() < maxDepositBoxes;
+    }
+    
+    /**
+     * Obtient les caisses de dépôt d'un propriétaire spécifique
+     */
+    public List<DepositBoxData> getDepositBoxesByOwner(UUID owner) {
+        return depositBoxes.values().stream()
+                .filter(depositBox -> depositBox.getOwner().equals(owner))
+                .collect(java.util.stream.Collectors.toList());
+    }
+    
+    // ==================== GESTION DES IMPRIMANTES ====================
+    
+    /**
+     * Ajoute une imprimante à l'île
+     */
+    public void addPrinter(PrinterData printer) {
+        printers.put(printer.getId(), printer);
+    }
+    
+    /**
+     * Supprime une imprimante de l'île
+     */
+    public void removePrinter(String printerId) {
+        printers.remove(printerId);
+    }
+    
+    /**
+     * Obtient une imprimante par son ID
+     */
+    public PrinterData getPrinter(String printerId) {
+        return printers.get(printerId);
+    }
+    
+    /**
+     * Obtient toutes les imprimantes de l'île
+     */
+    public Map<String, PrinterData> getPrinters() {
+        return new HashMap<>(printers);
+    }
+    
+    /**
+     * Obtient le nombre d'imprimantes sur l'île
+     */
+    public int getPrinterCount() {
+        return printers.size();
+    }
+    
+    /**
+     * Vérifie si on peut placer une imprimante sur l'île
+     */
+    public boolean canPlacePrinter() {
+        return printers.size() < maxPrinters;
+    }
+    
+    /**
+     * Obtient les imprimantes d'un propriétaire spécifique
+     */
+    public List<PrinterData> getPrintersByOwner(UUID owner) {
+        return printers.values().stream()
+                .filter(printer -> printer.getOwner().equals(owner))
+                .collect(java.util.stream.Collectors.toList());
+    }
 }

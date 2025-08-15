@@ -310,6 +310,33 @@ public class IslandManager {
     }
 
     /**
+     * Obtient l'île d'un joueur (propriétaire ou membre)
+     */
+    public Island getPlayerIsland(UUID playerId) {
+        // D'abord vérifier si le joueur est propriétaire d'une île
+        Island ownedIsland = plugin.getDatabaseManager().getIslandByOwner(playerId);
+        if (ownedIsland != null) {
+            return ownedIsland;
+        }
+
+        // Sinon, vérifier si le joueur est membre d'une île
+        for (Island island : plugin.getDatabaseManager().getAllIslands()) {
+            if (island.isMember(playerId)) {
+                return island;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Obtient une île par son ID
+     */
+    public Island getIslandById(UUID islandId) {
+        return plugin.getDatabaseManager().loadIsland(islandId);
+    }
+
+    /**
      * Nettoie les îles sans monde
      */
     public void cleanupOrphanedIslands() {
