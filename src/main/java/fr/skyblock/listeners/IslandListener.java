@@ -62,6 +62,7 @@ public class IslandListener implements Listener {
             // Gestion du compteur de hoppers
             if (event.getBlock().getType() == Material.HOPPER) {
                 island.decrementHoppers();
+                plugin.getHopperTransferManager().unregisterHopper(event.getBlock().getLocation());
             }
             // Membre ou propriétaire - toujours autorisé
             island.updateActivity();
@@ -75,6 +76,7 @@ public class IslandListener implements Listener {
         } else {
             if (event.getBlock().getType() == Material.HOPPER) {
                 island.decrementHoppers();
+                plugin.getHopperTransferManager().unregisterHopper(event.getBlock().getLocation());
             }
         }
     }
@@ -107,6 +109,8 @@ public class IslandListener implements Listener {
                     return;
                 } else {
                     island.incrementHoppers();
+                    // Enregistrer le hopper pour le scheduler custom
+                    plugin.getHopperTransferManager().registerHopper(event.getBlock().getLocation());
                 }
             }
             // Membre ou propriétaire - toujours autorisé
@@ -126,6 +130,7 @@ public class IslandListener implements Listener {
                 return;
             } else {
                 island.incrementHoppers();
+                plugin.getHopperTransferManager().registerHopper(event.getBlock().getLocation());
             }
         }
     }
@@ -352,96 +357,5 @@ public class IslandListener implements Listener {
 
     // === OPTIMISATION DES HOPPERS ===
     // Throttle le transfert à 1s et ajuste la quantité transférée selon l'amélioration
-    private final java.util.Map<String, Long> lastHopperMoveMs = new java.util.concurrent.ConcurrentHashMap<>();
-
-    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
-    public void onInventoryMove(InventoryMoveItemEvent event) {
-        // Détecter les mouvements initiés par un hopper de bloc
-        if (!(event.getInitiator() != null && event.getInitiator().getHolder() instanceof Hopper hopper)) {
-            return;
-        }
-
-        Location loc = hopper.getBlock().getLocation();
-        if (!isInSkyblockWorld(loc)) return;
-
-        Island island = plugin.getIslandManager().getIslandAtLocation(loc);
-        if (island == null) return;
-
-        // On ne gère que les transferts sortants (source = hopper),
-        // pour éviter un double traitement chest->hopper et hopper->destination.
-        boolean sourceIsHopper = event.getSource() != null && event.getSource().getHolder() instanceof Hopper;
-        if (!sourceIsHopper) {
-            return; // laisser le pull chest->hopper vanilla tel quel
-        }
-
-        // Throttle: 1 fois par seconde par hopper
-        String key = loc.getWorld().getName() + ":" + loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ();
-        long now = System.currentTimeMillis();
-        Long last = lastHopperMoveMs.get(key);
-        if (last != null && (now - last) < 1000L) {
-            event.setCancelled(true);
-            return;
-        }
-
-        lastHopperMoveMs.put(key, now);
-
-        // Effectuer un transfert en rafale et annuler l'événement vanilla
-        ItemStack moving = event.getItem();
-        if (moving == null) return;
-        int desired = Math.max(1, island.getHopperTransferRate());
-
-        Inventory source = event.getSource();
-        Inventory destination = event.getDestination();
-
-        int moved = moveItemsBurst(source, destination, moving, desired);
-        if (moved > 0) {
-            event.setCancelled(true);
-        }
-    }
-
-    private int moveItemsBurst(Inventory source, Inventory destination, ItemStack prototype, int maxAmount) {
-        int remaining = maxAmount;
-        int movedTotal = 0;
-
-        for (int slot = 0; slot < source.getSize() && remaining > 0; slot++) {
-            ItemStack stack = source.getItem(slot);
-            if (stack == null) continue;
-            if (!stack.isSimilar(prototype)) continue;
-
-            int take = Math.min(stack.getAmount(), remaining);
-            if (take <= 0) continue;
-
-            // Tenter d'ajouter dans la destination d'abord
-            ItemStack toMove = prototype.clone();
-            toMove.setAmount(take);
-            java.util.Map<Integer, ItemStack> leftover = destination.addItem(toMove);
-            int notFit = 0;
-            if (!leftover.isEmpty()) {
-                for (ItemStack li : leftover.values()) {
-                    notFit += li.getAmount();
-                }
-            }
-
-            int inserted = take - notFit;
-            if (inserted > 0) {
-                // Retirer exactement ce qui a été inséré
-                int newAmount = stack.getAmount() - inserted;
-                if (newAmount <= 0) {
-                    source.clear(slot);
-                } else {
-                    stack.setAmount(newAmount);
-                    source.setItem(slot, stack);
-                }
-                movedTotal += inserted;
-                remaining -= inserted;
-            }
-
-            // Si destination pleine, arrêter
-            if (notFit > 0) {
-                break;
-            }
-        }
-
-        return movedTotal;
-    }
+    // Le système de transfert est désormais géré par HopperTransferManager (périodique)
 }
