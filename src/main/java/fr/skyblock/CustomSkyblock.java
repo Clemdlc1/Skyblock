@@ -25,9 +25,6 @@ public final class CustomSkyblock extends JavaPlugin {
     private WarpManager warpManager;
     private MultiverseCoreApi multiverseCoreApi;
     private PrisonTycoonHook prisonTycoonHook;
-    private IslandUpgradeManager islandUpgradeManager;
-    private DepositBoxManager depositBoxManager;
-    private PrinterManager printerManager;
 
 
     // Configuration
@@ -59,9 +56,6 @@ public final class CustomSkyblock extends JavaPlugin {
         this.menuManager = new MenuManager(this);
         this.warpManager = new WarpManager(this);
         this.prisonTycoonHook = new PrisonTycoonHook(this);
-        this.islandUpgradeManager = new IslandUpgradeManager(this);
-        this.depositBoxManager = new DepositBoxManager(this);
-        this.printerManager = new PrinterManager(this);
 
         // Vérification du hook PrisonTycoon
         if (!prisonTycoonHook.isEnabled()) {
@@ -97,7 +91,6 @@ public final class CustomSkyblock extends JavaPlugin {
         if (economyManager != null) {
             economyManager.saveAllBalances();
         }
-
         if (databaseManager != null) {
             databaseManager.saveAll();
             databaseManager.close();
@@ -162,18 +155,6 @@ public final class CustomSkyblock extends JavaPlugin {
 
     public WarpManager getWarpManager() {
         return warpManager;
-    }
-
-    public IslandUpgradeManager getIslandUpgradeManager() {
-        return islandUpgradeManager;
-    }
-    
-    public DepositBoxManager getDepositBoxManager() {
-        return depositBoxManager;
-    }
-    
-    public PrinterManager getPrinterManager() {
-        return printerManager;
     }
 
     public MultiverseCoreApi getMultiverseCoreApi() {

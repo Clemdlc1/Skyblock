@@ -5,9 +5,7 @@ import com.google.gson.reflect.TypeToken;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import fr.skyblock.CustomSkyblock;
-import fr.skyblock.models.DepositBoxData;
 import fr.skyblock.models.Island;
-import fr.skyblock.models.PrinterData;
 import fr.skyblock.models.SkyblockPlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -73,14 +71,7 @@ public class DatabaseManager {
                 "members TEXT," +
                 "flags TEXT," +
                 "creation_time BIGINT DEFAULT 0," +
-                "last_activity BIGINT DEFAULT 0," +
-                "max_deposit_boxes INT DEFAULT 1," +
-                "max_hoppers INT DEFAULT 5," +
-                "hopper_transfer_speed DOUBLE PRECISION DEFAULT 1.0," +
-                "max_printers INT DEFAULT 10," +
-                "printer_generation_speed DOUBLE PRECISION DEFAULT 1.0," +
-                "deposit_boxes TEXT," +
-                "printers TEXT" +
+                "last_activity BIGINT DEFAULT 0" +
                 ");";
 
         // CORRECTION : Supprimer l'ancienne contrainte si elle existe et recréer correctement
@@ -127,15 +118,13 @@ public class DatabaseManager {
     public void saveIsland(Island island) {
         islandsCache.put(island.getId(), island);
 
-        String query = "INSERT INTO islands (id, owner_uuid, name, level, bank, size, center_world, center_x, center_y, center_z, center_yaw, center_pitch, members, flags, creation_time, last_activity, max_deposit_boxes, max_hoppers, hopper_transfer_speed, max_printers, printer_generation_speed, deposit_boxes, printers) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+        String query = "INSERT INTO islands (id, owner_uuid, name, level, bank, size, center_world, center_x, center_y, center_z, center_yaw, center_pitch, members, flags, creation_time, last_activity) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
                 "ON CONFLICT (id) DO UPDATE SET " +
                 "owner_uuid = EXCLUDED.owner_uuid, name = EXCLUDED.name, level = EXCLUDED.level, bank = EXCLUDED.bank, size = EXCLUDED.size, " +
                 "center_world = EXCLUDED.center_world, center_x = EXCLUDED.center_x, center_y = EXCLUDED.center_y, center_z = EXCLUDED.center_z, " +
                 "center_yaw = EXCLUDED.center_yaw, center_pitch = EXCLUDED.center_pitch, members = EXCLUDED.members, flags = EXCLUDED.flags, " +
-                "creation_time = EXCLUDED.creation_time, last_activity = EXCLUDED.last_activity, " +
-                "max_deposit_boxes = EXCLUDED.max_deposit_boxes, max_hoppers = EXCLUDED.max_hoppers, hopper_transfer_speed = EXCLUDED.hopper_transfer_speed, " +
-                "max_printers = EXCLUDED.max_printers, printer_generation_speed = EXCLUDED.printer_generation_speed, deposit_boxes = EXCLUDED.deposit_boxes, printers = EXCLUDED.printers";
+                "creation_time = EXCLUDED.creation_time, last_activity = EXCLUDED.last_activity";
 
         try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, island.getId().toString());
@@ -166,15 +155,6 @@ public class DatabaseManager {
             ps.setString(14, gson.toJson(island.getFlags()));
             ps.setLong(15, island.getCreationTime());
             ps.setLong(16, island.getLastActivity());
-            
-            // Nouvelles colonnes pour les améliorations d'île
-            ps.setInt(17, island.getMaxDepositBoxes());
-            ps.setInt(18, island.getMaxHoppers());
-            ps.setDouble(19, island.getHopperTransferSpeed());
-            ps.setInt(20, island.getMaxPrinters());
-            ps.setDouble(21, island.getPrinterGenerationSpeed());
-            ps.setString(22, gson.toJson(island.getDepositBoxes()));
-            ps.setString(23, gson.toJson(island.getPrinters()));
 
             ps.executeUpdate();
             plugin.getLogger().info("Île sauvegardée: " + island.getId());
@@ -479,13 +459,6 @@ public class DatabaseManager {
         island.setBank(rs.getDouble("bank"));
         island.setSize(rs.getInt("size"));
         island.setLastActivity(rs.getLong("last_activity"));
-        
-        // Charger les améliorations d'île
-        island.setMaxDepositBoxes(rs.getInt("max_deposit_boxes"));
-        island.setMaxHoppers(rs.getInt("max_hoppers"));
-        island.setHopperTransferSpeed(rs.getDouble("hopper_transfer_speed"));
-        island.setMaxPrinters(rs.getInt("max_printers"));
-        island.setPrinterGenerationSpeed(rs.getDouble("printer_generation_speed"));
 
         // Charger les membres
         String membersJson = rs.getString("members");
@@ -504,26 +477,6 @@ public class DatabaseManager {
             Map<Island.IslandFlag, Boolean> flags = gson.fromJson(flagsJson, flagsType);
             if (flags != null) {
                 flags.forEach(island::setFlag);
-            }
-        }
-        
-        // Charger les caisses de dépôt
-        String depositBoxesJson = rs.getString("deposit_boxes");
-        if (depositBoxesJson != null && !depositBoxesJson.isEmpty()) {
-            Type depositBoxesType = new TypeToken<Map<String, DepositBoxData>>() {}.getType();
-            Map<String, DepositBoxData> depositBoxes = gson.fromJson(depositBoxesJson, depositBoxesType);
-            if (depositBoxes != null) {
-                depositBoxes.forEach((id, depositBox) -> island.addDepositBox(depositBox));
-            }
-        }
-        
-        // Charger les imprimantes
-        String printersJson = rs.getString("printers");
-        if (printersJson != null && !printersJson.isEmpty()) {
-            Type printersType = new TypeToken<Map<String, PrinterData>>() {}.getType();
-            Map<String, PrinterData> printers = gson.fromJson(printersJson, printersType);
-            if (printers != null) {
-                printers.forEach((id, printer) -> island.addPrinter(printer));
             }
         }
 
