@@ -60,6 +60,15 @@ public class PlayerListener implements Listener {
         processIncomingInvitations(player);
     }
 
+    /**
+     * Sauvegarde sécurisée d'une île seulement si elle est accessible
+     */
+    private void safeSaveIsland(Island island) {
+        if (plugin.getDatabaseManager().isIslandLoaded(island.getId())) {
+            plugin.getDatabaseManager().saveIsland(island);
+        }
+    }
+
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
@@ -75,7 +84,7 @@ public class PlayerListener implements Listener {
         Island island = plugin.getIslandManager().getIslandAtLocation(player.getLocation());
         if (island != null && island.isMember(player.getUniqueId())) {
             island.updateActivity();
-            plugin.getDatabaseManager().saveIsland(island);
+            safeSaveIsland(island);
         }
 
         // Nettoyer les données temporaires
@@ -199,7 +208,7 @@ public class PlayerListener implements Listener {
         // Ajouter comme visiteur si pas membre
         if (!island.isMember(player.getUniqueId())) {
             island.addVisitor(player.getUniqueId());
-            plugin.getDatabaseManager().saveIsland(island);
+            safeSaveIsland(island);
 
             // Message de bienvenue
             player.sendMessage(ChatColor.GREEN + "Bienvenue sur l'île de " +
@@ -228,7 +237,7 @@ public class PlayerListener implements Listener {
         // Retirer des visiteurs
         if (!island.isMember(player.getUniqueId())) {
             island.removeVisitor(player.getUniqueId());
-            plugin.getDatabaseManager().saveIsland(island);
+            safeSaveIsland(island);
 
             player.sendMessage(ChatColor.YELLOW + "Vous quittez l'île de " +
                     getPlayerName(island.getOwner()));

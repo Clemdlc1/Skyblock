@@ -1,6 +1,7 @@
 package fr.skyblock.managers;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -9,10 +10,13 @@ import fr.skyblock.models.DepositBoxData;
 import fr.skyblock.models.Island;
 import fr.skyblock.models.PrinterData;
 import fr.skyblock.models.SkyblockPlayer;
+import fr.skyblock.utils.ItemStackAdapter;
+import fr.skyblock.utils.LocationAdapter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.inventory.ItemStack;
 
 import java.lang.reflect.Type;
 import java.sql.*;
@@ -23,7 +27,11 @@ public class DatabaseManager {
 
     private final CustomSkyblock plugin;
     private HikariDataSource dataSource;
-    private final Gson gson = new Gson();
+    private final Gson gson = new GsonBuilder()
+            .registerTypeAdapter(Location.class, new LocationAdapter())
+            .registerTypeAdapter(ItemStack.class, new ItemStackAdapter())
+            .setPrettyPrinting() // Pour un debug plus facile
+            .create();
 
     private final Map<UUID, Island> islandsCache = new ConcurrentHashMap<>();
     private final Map<UUID, SkyblockPlayer> playersCache = new ConcurrentHashMap<>();
@@ -125,6 +133,14 @@ public class DatabaseManager {
     // --- Gestion des Îles ---
 
     public void saveIsland(Island island) {
+        try {
+            saveIslandInternal(island);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to save island " + island.getId() + ": " + e.getMessage());
+        }
+    }
+
+    private void saveIslandInternal(Island island) {
         islandsCache.put(island.getId(), island);
 
         String query = "INSERT INTO islands (id, owner_uuid, name, level, bank, size, center_world, center_x, center_y, center_z, center_yaw, center_pitch, members, flags, creation_time, last_activity, max_deposit_boxes, max_hoppers, hopper_transfer_speed, max_printers, printer_generation_speed, deposit_boxes, printers) " +
@@ -147,12 +163,23 @@ public class DatabaseManager {
 
             Location center = island.getCenter();
             if (center != null && center.getWorld() != null) {
-                ps.setString(7, center.getWorld().getName());
-                ps.setDouble(8, center.getX());
-                ps.setDouble(9, center.getY());
-                ps.setDouble(10, center.getZ());
-                ps.setFloat(11, center.getYaw());
-                ps.setFloat(12, center.getPitch());
+                try {
+                    ps.setString(7, center.getWorld().getName());
+                    ps.setDouble(8, center.getX());
+                    ps.setDouble(9, center.getY());
+                    ps.setDouble(10, center.getZ());
+                    ps.setFloat(11, center.getYaw());
+                    ps.setFloat(12, center.getPitch());
+                } catch (IllegalArgumentException e) {
+                    // Le monde n'est plus chargé, sauvegarder sans les coordonnées
+                    plugin.getLogger().warning("World unloaded for island " + island.getId() + ", saving without location data");
+                    ps.setNull(7, Types.VARCHAR);
+                    ps.setNull(8, Types.DOUBLE);
+                    ps.setNull(9, Types.DOUBLE);
+                    ps.setNull(10, Types.DOUBLE);
+                    ps.setNull(11, Types.FLOAT);
+                    ps.setNull(12, Types.FLOAT);
+                }
             } else {
                 ps.setNull(7, Types.VARCHAR);
                 ps.setNull(8, Types.DOUBLE);
@@ -444,6 +471,13 @@ public class DatabaseManager {
 
     // --- Fermeture et Méthodes d'Aide ---
 
+    /**
+     * Vérifie si une île est chargée dans le cache
+     */
+    public boolean isIslandLoaded(UUID islandId) {
+        return islandsCache.containsKey(islandId);
+    }
+
     public void close() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
@@ -460,14 +494,18 @@ public class DatabaseManager {
         if (worldName != null && !worldName.isEmpty()) {
             World world = Bukkit.getWorld(worldName);
             if (world != null) {
-                center = new Location(
-                        world,
-                        rs.getDouble("center_x"),
-                        rs.getDouble("center_y"),
-                        rs.getDouble("center_z"),
-                        rs.getFloat("center_yaw"),
-                        rs.getFloat("center_pitch")
-                );
+                try {
+                    center = new Location(
+                            world,
+                            rs.getDouble("center_x"),
+                            rs.getDouble("center_y"),
+                            rs.getDouble("center_z"),
+                            rs.getFloat("center_yaw"),
+                            rs.getFloat("center_pitch")
+                    );
+                } catch (IllegalArgumentException e) {
+                    plugin.getLogger().warning("Could not create location for island " + islandId + " in world '" + worldName + "': " + e.getMessage());
+                }
             } else {
                 plugin.getLogger().warning("Could not find world '" + worldName + "' for island " + islandId);
             }

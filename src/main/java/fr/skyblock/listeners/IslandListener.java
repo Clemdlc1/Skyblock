@@ -57,7 +57,7 @@ public class IslandListener implements Listener {
         if (island.isMember(player.getUniqueId())) {
             // Membre ou propriétaire - toujours autorisé
             island.updateActivity();
-            plugin.getDatabaseManager().saveIsland(island);
+            safeSaveIsland(island);
             return;
         }
 
@@ -89,7 +89,7 @@ public class IslandListener implements Listener {
         if (island.isMember(player.getUniqueId())) {
             // Membre ou propriétaire - toujours autorisé
             island.updateActivity();
-            plugin.getDatabaseManager().saveIsland(island);
+            safeSaveIsland(island);
             return;
         }
 
@@ -101,6 +101,15 @@ public class IslandListener implements Listener {
     }
 
     // === PROTECTION DES INTERACTIONS ===
+
+    /**
+     * Sauvegarde sécurisée d'une île seulement si elle est chargée
+     */
+    private void safeSaveIsland(Island island) {
+        if (plugin.getDatabaseManager().isIslandLoaded(island.getId())) {
+            plugin.getDatabaseManager().saveIsland(island);
+        }
+    }
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerInteract(PlayerInteractEvent event) {
@@ -115,7 +124,7 @@ public class IslandListener implements Listener {
         // Membre ou propriétaire - toujours autorisé
         if (island.isMember(player.getUniqueId())) {
             island.updateActivity();
-            plugin.getDatabaseManager().saveIsland(island);
+            safeSaveIsland(island);
             return;
         }
 
@@ -142,7 +151,7 @@ public class IslandListener implements Listener {
         // Membre ou propriétaire - toujours autorisé
         if (island.isMember(player.getUniqueId())) {
             island.updateActivity();
-            plugin.getDatabaseManager().saveIsland(island);
+            safeSaveIsland(island);
             return;
         }
 

@@ -102,6 +102,8 @@ public class IslandManager {
         player.teleport(teleportLocation);
         plugin.getWorldManager().markPlayerEntered(world.getName());
         island.updateActivity();
+        
+        // Sauvegarder l'île
         plugin.getDatabaseManager().saveIsland(island);
 
         // Mettre à jour la world border
