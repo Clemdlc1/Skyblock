@@ -367,6 +367,13 @@ public class IslandListener implements Listener {
         Island island = plugin.getIslandManager().getIslandAtLocation(loc);
         if (island == null) return;
 
+        // On ne gère que les transferts sortants (source = hopper),
+        // pour éviter un double traitement chest->hopper et hopper->destination.
+        boolean sourceIsHopper = event.getSource() != null && event.getSource().getHolder() instanceof Hopper;
+        if (!sourceIsHopper) {
+            return; // laisser le pull chest->hopper vanilla tel quel
+        }
+
         // Throttle: 1 fois par seconde par hopper
         String key = loc.getWorld().getName() + ":" + loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ();
         long now = System.currentTimeMillis();
@@ -404,36 +411,34 @@ public class IslandListener implements Listener {
             int take = Math.min(stack.getAmount(), remaining);
             if (take <= 0) continue;
 
-            // Retirer du source
-            stack.setAmount(stack.getAmount() - take);
-            if (stack.getAmount() <= 0) {
-                source.clear(slot);
-            } else {
-                source.setItem(slot, stack);
-            }
-
-            // Tenter d'ajouter dans la destination
+            // Tenter d'ajouter dans la destination d'abord
             ItemStack toMove = prototype.clone();
             toMove.setAmount(take);
             java.util.Map<Integer, ItemStack> leftover = destination.addItem(toMove);
             int notFit = 0;
             if (!leftover.isEmpty()) {
-                // récupérer la quantité non insérée
                 for (ItemStack li : leftover.values()) {
                     notFit += li.getAmount();
                 }
             }
 
             int inserted = take - notFit;
-            movedTotal += inserted;
-            remaining -= inserted;
+            if (inserted > 0) {
+                // Retirer exactement ce qui a été inséré
+                int newAmount = stack.getAmount() - inserted;
+                if (newAmount <= 0) {
+                    source.clear(slot);
+                } else {
+                    stack.setAmount(newAmount);
+                    source.setItem(slot, stack);
+                }
+                movedTotal += inserted;
+                remaining -= inserted;
+            }
 
-            // Remettre le surplus dans la source
+            // Si destination pleine, arrêter
             if (notFit > 0) {
-                ItemStack back = prototype.clone();
-                back.setAmount(notFit);
-                source.addItem(back);
-                break; // destination pleine
+                break;
             }
         }
 
