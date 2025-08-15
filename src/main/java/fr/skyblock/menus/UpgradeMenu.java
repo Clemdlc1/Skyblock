@@ -210,6 +210,9 @@ public class UpgradeMenu extends BaseMenu {
     }
 
     private void setupTechnicalUpgrades(Inventory inv, Island island, Player player) {
+        long playerCoins = plugin.getPrisonTycoonHook().getCoins(player.getUniqueId());
+        long bankCoins = (long) Math.floor(island.getBank());
+
         // Hopper limit
         List<String> hopperLore = new ArrayList<>();
         hopperLore.add(ChatColor.GRAY + "Limite actuelle: " + ChatColor.WHITE + island.getHopperLimit());
@@ -217,7 +220,9 @@ public class UpgradeMenu extends BaseMenu {
         hopperLore.add("");
         hopperLore.add(ChatColor.YELLOW + "Augmente la limite de hoppers de +5");
         hopperLore.add(ChatColor.GRAY + "Coût: " + ChatColor.GOLD + "5000 coins");
-        inv.setItem(31, createItem(Material.HOPPER, ChatColor.AQUA + "Limite de Hoppers", hopperLore));
+        hopperLore.add(ChatColor.GRAY + "Sources: Banque d'île (" + bankCoins + ") + Vos coins (" + playerCoins + ")");
+        boolean affordLimit = (bankCoins + playerCoins) >= 5000;
+        inv.setItem(31, createItem(affordLimit ? Material.HOPPER : Material.BARRIER, ChatColor.AQUA + "Limite de Hoppers", hopperLore));
 
         // Hopper speed
         List<String> speedLore = new ArrayList<>();
@@ -225,7 +230,9 @@ public class UpgradeMenu extends BaseMenu {
         speedLore.add("");
         speedLore.add(ChatColor.YELLOW + "Augmente la vitesse des transferts de +8 items/s");
         speedLore.add(ChatColor.GRAY + "Coût: " + ChatColor.GOLD + "7500 coins");
-        inv.setItem(32, createItem(Material.REPEATER, ChatColor.AQUA + "Vitesse des Hoppers", speedLore));
+        speedLore.add(ChatColor.GRAY + "Sources: Banque d'île (" + bankCoins + ") + Vos coins (" + playerCoins + ")");
+        boolean affordSpeed = (bankCoins + playerCoins) >= 7500;
+        inv.setItem(32, createItem(affordSpeed ? Material.REPEATER : Material.BARRIER, ChatColor.AQUA + "Vitesse des Hoppers", speedLore));
 
         // Max deposit chests (partiel)
         List<String> chestLore = new ArrayList<>();
@@ -344,11 +351,11 @@ public class UpgradeMenu extends BaseMenu {
 
     private void handleHopperLimit(Player player, Island island) {
         long cost = 5000;
-        if (!plugin.getPrisonTycoonHook().hasCoins(player.getUniqueId(), cost)) {
-            player.sendMessage(ChatColor.RED + "Pas assez de coins ! Requis: " + cost);
+        if (!canAffordWithBankAndPlayer(island, player, cost)) {
+            player.sendMessage(ChatColor.RED + "Fonds insuffisants ! Requis: " + cost + " (banque + vos coins)");
             return;
         }
-        if (!plugin.getPrisonTycoonHook().removeCoins(player.getUniqueId(), cost)) {
+        if (!payWithBankAndPlayer(island, player, cost)) {
             player.sendMessage(ChatColor.RED + "Erreur lors du paiement !");
             return;
         }
@@ -360,11 +367,11 @@ public class UpgradeMenu extends BaseMenu {
 
     private void handleHopperSpeed(Player player, Island island) {
         long cost = 7500;
-        if (!plugin.getPrisonTycoonHook().hasCoins(player.getUniqueId(), cost)) {
-            player.sendMessage(ChatColor.RED + "Pas assez de coins ! Requis: " + cost);
+        if (!canAffordWithBankAndPlayer(island, player, cost)) {
+            player.sendMessage(ChatColor.RED + "Fonds insuffisants ! Requis: " + cost + " (banque + vos coins)");
             return;
         }
-        if (!plugin.getPrisonTycoonHook().removeCoins(player.getUniqueId(), cost)) {
+        if (!payWithBankAndPlayer(island, player, cost)) {
             player.sendMessage(ChatColor.RED + "Erreur lors du paiement !");
             return;
         }
@@ -372,5 +379,33 @@ public class UpgradeMenu extends BaseMenu {
         plugin.getDatabaseManager().saveIsland(island);
         player.sendMessage(ChatColor.GREEN + "Vitesse des hoppers augmentée à " + island.getHopperTransferRate() + "/s.");
         open(player);
+    }
+
+    private boolean canAffordWithBankAndPlayer(Island island, Player player, long cost) {
+        long bankCoins = (long) Math.floor(island.getBank());
+        long playerCoins = plugin.getPrisonTycoonHook().getCoins(player.getUniqueId());
+        return bankCoins + playerCoins >= cost;
+    }
+
+    private boolean payWithBankAndPlayer(Island island, Player player, long cost) {
+        long bankCoins = (long) Math.floor(island.getBank());
+        long takeFromBank = Math.min(cost, bankCoins);
+        long remaining = cost - takeFromBank;
+
+        if (takeFromBank > 0) {
+            island.removeFromBank(takeFromBank);
+        }
+
+        if (remaining > 0) {
+            boolean ok = plugin.getPrisonTycoonHook().removeCoins(player.getUniqueId(), remaining);
+            if (!ok) {
+                // rollback banque si nécessaire
+                if (takeFromBank > 0) {
+                    island.addToBank(takeFromBank);
+                }
+                return false;
+            }
+        }
+        return true;
     }
 }

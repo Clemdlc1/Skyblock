@@ -28,6 +28,7 @@ import org.bukkit.block.Chest;
 import org.bukkit.block.ShulkerBox;
 import org.bukkit.block.Hopper;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.Inventory;
 
 public class IslandListener implements Listener {
 
@@ -377,15 +378,65 @@ public class IslandListener implements Listener {
 
         lastHopperMoveMs.put(key, now);
 
-        // Ajuster la quantité transférée par burst
+        // Effectuer un transfert en rafale et annuler l'événement vanilla
         ItemStack moving = event.getItem();
         if (moving == null) return;
         int desired = Math.max(1, island.getHopperTransferRate());
-        int amount = Math.min(moving.getAmount(), desired);
-        if (amount != moving.getAmount()) {
-            ItemStack clone = moving.clone();
-            clone.setAmount(amount);
-            event.setItem(clone);
+
+        Inventory source = event.getSource();
+        Inventory destination = event.getDestination();
+
+        int moved = moveItemsBurst(source, destination, moving, desired);
+        if (moved > 0) {
+            event.setCancelled(true);
         }
+    }
+
+    private int moveItemsBurst(Inventory source, Inventory destination, ItemStack prototype, int maxAmount) {
+        int remaining = maxAmount;
+        int movedTotal = 0;
+
+        for (int slot = 0; slot < source.getSize() && remaining > 0; slot++) {
+            ItemStack stack = source.getItem(slot);
+            if (stack == null) continue;
+            if (!stack.isSimilar(prototype)) continue;
+
+            int take = Math.min(stack.getAmount(), remaining);
+            if (take <= 0) continue;
+
+            // Retirer du source
+            stack.setAmount(stack.getAmount() - take);
+            if (stack.getAmount() <= 0) {
+                source.clear(slot);
+            } else {
+                source.setItem(slot, stack);
+            }
+
+            // Tenter d'ajouter dans la destination
+            ItemStack toMove = prototype.clone();
+            toMove.setAmount(take);
+            java.util.Map<Integer, ItemStack> leftover = destination.addItem(toMove);
+            int notFit = 0;
+            if (!leftover.isEmpty()) {
+                // récupérer la quantité non insérée
+                for (ItemStack li : leftover.values()) {
+                    notFit += li.getAmount();
+                }
+            }
+
+            int inserted = take - notFit;
+            movedTotal += inserted;
+            remaining -= inserted;
+
+            // Remettre le surplus dans la source
+            if (notFit > 0) {
+                ItemStack back = prototype.clone();
+                back.setAmount(notFit);
+                source.addItem(back);
+                break; // destination pleine
+            }
+        }
+
+        return movedTotal;
     }
 }
