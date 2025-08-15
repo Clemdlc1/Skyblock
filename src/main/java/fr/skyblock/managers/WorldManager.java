@@ -34,7 +34,7 @@ public class WorldManager {
     public WorldManager(CustomSkyblock plugin) {
         this.plugin = plugin;
         this.islandsFolder = plugin.getConfig().getString("island.worlds-folder", "islands");
-        int minutes = plugin.getConfig().getInt("advanced.auto-unload-minutes", 15);
+        int minutes = plugin.getConfig().getInt("advanced.auto-unload-minutes", 30);
         this.unloadAfterMillis = Math.max(1, minutes) * 60L * 1000L;
         ensureIslandsFolder();
         loadExistingWorlds();
@@ -461,7 +461,7 @@ public class WorldManager {
     }
 
     private void startAutoUnloadTask() {
-        // Vérifie toutes les minutes et décharge les mondes d'îles inactifs depuis 15 minutes
+        // Vérifie toutes les minutes et décharge les mondes d'îles inactifs depuis 30 minutes
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             try {
                 org.mvplugins.multiverse.core.world.@NotNull WorldManager mvWorldManager = plugin.getMultiverseCoreApi().getWorldManager();
@@ -473,13 +473,21 @@ public class WorldManager {
                     if (!bukkitWorld.getPlayers().isEmpty()) continue; // encore utilisé
 
                     long last = lastPlayerLeftAt.getOrDefault(worldName, now);
-                    // si pas de timestamp, initialise maintenant pour laisser 15min
+                    // si pas de timestamp, initialise maintenant pour laisser 30min
                     if (!lastPlayerLeftAt.containsKey(worldName)) {
                         lastPlayerLeftAt.put(worldName, now);
                         continue;
                     }
 
                     if (now - last >= unloadAfterMillis) {
+                        // Sauvegarder l'île avant de décharger le monde
+                        UUID islandId = entry.getKey();
+                        Island island = plugin.getDatabaseManager().loadIsland(islandId);
+                        if (island != null) {
+                            plugin.getDatabaseManager().forceSaveIsland(island);
+                            plugin.getLogger().info("Île sauvegardée avant déchargement: " + islandId);
+                        }
+                        
                         // Décharger via Multiverse (sauvegarde true)
                         mvWorldManager.getLoadedWorld(bukkitWorld).peek(loaded -> {
                             mvWorldManager.unloadWorld(org.mvplugins.multiverse.core.world.options.UnloadWorldOptions
@@ -504,6 +512,16 @@ public class WorldManager {
                 String worldName = world.getName();
                 if (!isIslandWorld(worldName)) continue;
                 if (!world.getPlayers().isEmpty()) continue;
+
+                // Sauvegarder l'île avant de décharger le monde
+                UUID islandId = getIslandIdFromWorldName(worldName);
+                if (islandId != null) {
+                    Island island = plugin.getDatabaseManager().loadIsland(islandId);
+                    if (island != null) {
+                        plugin.getDatabaseManager().forceSaveIsland(island);
+                        plugin.getLogger().info("Île sauvegardée avant déchargement au démarrage: " + islandId);
+                    }
+                }
 
                 mvWorldManager.getLoadedWorld(world).peek(loaded -> {
                     mvWorldManager.unloadWorld(org.mvplugins.multiverse.core.world.options.UnloadWorldOptions

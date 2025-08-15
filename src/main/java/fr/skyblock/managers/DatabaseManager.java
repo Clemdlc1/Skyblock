@@ -140,6 +140,17 @@ public class DatabaseManager {
         }
     }
 
+    /**
+     * Force save island data even if world is unloaded (used before unloading)
+     */
+    public void forceSaveIsland(Island island) {
+        try {
+            saveIslandInternal(island);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to force save island " + island.getId() + ": " + e.getMessage());
+        }
+    }
+
     private void saveIslandInternal(Island island) {
         islandsCache.put(island.getId(), island);
 
@@ -162,17 +173,30 @@ public class DatabaseManager {
             ps.setInt(6, island.getSize());
 
             Location center = island.getCenter();
-            if (center != null && center.getWorld() != null) {
+            if (center != null) {
                 try {
-                    ps.setString(7, center.getWorld().getName());
-                    ps.setDouble(8, center.getX());
-                    ps.setDouble(9, center.getY());
-                    ps.setDouble(10, center.getZ());
-                    ps.setFloat(11, center.getYaw());
-                    ps.setFloat(12, center.getPitch());
-                } catch (IllegalArgumentException e) {
-                    // Le monde n'est plus chargé, sauvegarder sans les coordonnées
-                    plugin.getLogger().warning("World unloaded for island " + island.getId() + ", saving without location data");
+                    // Vérifier si le monde existe avant d'accéder à ses propriétés
+                    World world = center.getWorld();
+                    if (world != null && Bukkit.getWorld(world.getName()) != null) {
+                        ps.setString(7, world.getName());
+                        ps.setDouble(8, center.getX());
+                        ps.setDouble(9, center.getY());
+                        ps.setDouble(10, center.getZ());
+                        ps.setFloat(11, center.getYaw());
+                        ps.setFloat(12, center.getPitch());
+                    } else {
+                        // Le monde n'est plus chargé, sauvegarder sans les coordonnées
+                        plugin.getLogger().info("World unloaded for island " + island.getId() + ", saving without location data");
+                        ps.setNull(7, Types.VARCHAR);
+                        ps.setNull(8, Types.DOUBLE);
+                        ps.setNull(9, Types.DOUBLE);
+                        ps.setNull(10, Types.DOUBLE);
+                        ps.setNull(11, Types.FLOAT);
+                        ps.setNull(12, Types.FLOAT);
+                    }
+                } catch (Exception e) {
+                    // Erreur lors de l'accès au monde, sauvegarder sans les coordonnées
+                    plugin.getLogger().info("Error accessing world for island " + island.getId() + ": " + e.getMessage() + ", saving without location data");
                     ps.setNull(7, Types.VARCHAR);
                     ps.setNull(8, Types.DOUBLE);
                     ps.setNull(9, Types.DOUBLE);
