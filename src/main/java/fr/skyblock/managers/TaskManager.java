@@ -18,7 +18,7 @@ public class TaskManager {
     }
 
     private void startPeriodicTasks() {
-        // Sauvegarde automatique toutes les 30 minutes
+        // Sauvegarde automatique toutes les 5 minutes
         BukkitTask autoSaveTask = new BukkitRunnable() {
             @Override
             public void run() {
@@ -28,7 +28,7 @@ public class TaskManager {
                 plugin.getEconomyManager().saveAllBalances();
                 plugin.getLogger().info("Sauvegarde automatique terminée !");
             }
-        }.runTaskTimerAsynchronously(plugin, 36000L, 36000L); // 30 minutes
+        }.runTaskTimerAsynchronously(plugin, 6000L, 6000L); // 5 minutes
 
         runningTasks.add(autoSaveTask);
 

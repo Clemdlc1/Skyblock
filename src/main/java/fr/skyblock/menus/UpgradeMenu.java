@@ -43,6 +43,9 @@ public class UpgradeMenu extends BaseMenu {
         // === AMÉLIORATIONS SPÉCIALES ===
         setupSpecialUpgrades(inv, island, player);
 
+        // === AMÉLIORATIONS TECHNIQUES (HOPPERS & AUTRES) ===
+        setupTechnicalUpgrades(inv, island, player);
+
         // === ÉCONOMIE ET STATISTIQUES ===
         setupEconomyDisplay(inv, player);
 
@@ -206,6 +209,46 @@ public class UpgradeMenu extends BaseMenu {
         }
     }
 
+    private void setupTechnicalUpgrades(Inventory inv, Island island, Player player) {
+        // Hopper limit
+        List<String> hopperLore = new ArrayList<>();
+        hopperLore.add(ChatColor.GRAY + "Limite actuelle: " + ChatColor.WHITE + island.getHopperLimit());
+        hopperLore.add(ChatColor.GRAY + "Hoppers posés: " + ChatColor.WHITE + island.getCurrentHoppers());
+        hopperLore.add("");
+        hopperLore.add(ChatColor.YELLOW + "Augmente la limite de hoppers de +5");
+        hopperLore.add(ChatColor.GRAY + "Coût: " + ChatColor.GOLD + "5000 coins");
+        inv.setItem(31, createItem(Material.HOPPER, ChatColor.AQUA + "Limite de Hoppers", hopperLore));
+
+        // Hopper speed
+        List<String> speedLore = new ArrayList<>();
+        speedLore.add(ChatColor.GRAY + "Vitesse actuelle: " + ChatColor.WHITE + island.getHopperTransferRate() + "/s");
+        speedLore.add("");
+        speedLore.add(ChatColor.YELLOW + "Augmente la vitesse des transferts de +8 items/s");
+        speedLore.add(ChatColor.GRAY + "Coût: " + ChatColor.GOLD + "7500 coins");
+        inv.setItem(32, createItem(Material.REPEATER, ChatColor.AQUA + "Vitesse des Hoppers", speedLore));
+
+        // Max deposit chests (partiel)
+        List<String> chestLore = new ArrayList<>();
+        chestLore.add(ChatColor.GRAY + "Caisses de dépôt max: " + ChatColor.WHITE + island.getMaxDepositChests());
+        chestLore.add("");
+        chestLore.add(ChatColor.YELLOW + "(À venir) Augmente la limite de caisses de dépôt");
+        inv.setItem(33, createItem(Material.CHEST, ChatColor.BLUE + "Caisses de dépôt (WIP)", chestLore));
+
+        // Bill generation speed (partiel)
+        List<String> billLore = new ArrayList<>();
+        billLore.add(ChatColor.GRAY + "Vitesse génération billets: " + ChatColor.WHITE + island.getBillGenerationSpeed());
+        billLore.add("");
+        billLore.add(ChatColor.YELLOW + "(À venir) Accélère la génération de billets");
+        inv.setItem(34, createItem(Material.PAPER, ChatColor.BLUE + "Génération de billets (WIP)", billLore));
+
+        // Max printers (partiel)
+        List<String> printerLore = new ArrayList<>();
+        printerLore.add(ChatColor.GRAY + "Imprimantes max: " + ChatColor.WHITE + island.getMaxPrinters());
+        printerLore.add("");
+        printerLore.add(ChatColor.YELLOW + "(À venir) Augmente le nombre d'imprimantes");
+        inv.setItem(35, createItem(Material.CARTOGRAPHY_TABLE, ChatColor.BLUE + "Imprimantes (WIP)", printerLore));
+    }
+
     private void setupEconomyDisplay(Inventory inv, Player player) {
         // Économie du joueur
         inv.setItem(4, createItem(Material.GOLD_INGOT, ChatColor.GOLD + "Votre Économie",
@@ -234,7 +277,6 @@ public class UpgradeMenu extends BaseMenu {
                 player.closeInventory();
                 plugin.getPrisonTycoonHook().showPlayerEconomy(player);
             }
-            case 6 -> openCalculator(player, island); // Calculateur
             case 10 -> handleExpansion(player, island, island.getSize() + 25); // +25
             case 11 -> handleExpansion(player, island, island.getSize() + 50); // +50
             case 12 -> handleExpansion(player, island, plugin.getMaxIslandSize()); // Max
@@ -242,7 +284,8 @@ public class UpgradeMenu extends BaseMenu {
             case 20 -> handleLevelUpgrade(player, island, island.getLevel() + 5); // +5 niveaux
             case 28 -> handleRevenueBoost(player, island); // Boost revenus
             case 29 -> handleAdvancedProtection(player, island); // Protection
-            case 30 -> handleVipWarps(player, island); // Warps VIP
+            case 31 -> handleHopperLimit(player, island); // + Hopper limit
+            case 32 -> handleHopperSpeed(player, island); // + Hopper speed
         }
     }
 
@@ -298,13 +341,36 @@ public class UpgradeMenu extends BaseMenu {
         player.sendMessage(ChatColor.YELLOW + "Fonctionnalité de protection avancée bientôt disponible !");
     }
 
-    private void handleVipWarps(Player player, Island island) {
-        // TODO: Implémenter l'achat de warps VIP
-        player.sendMessage(ChatColor.YELLOW + "Fonctionnalité de warps VIP bientôt disponible !");
+
+    private void handleHopperLimit(Player player, Island island) {
+        long cost = 5000;
+        if (!plugin.getPrisonTycoonHook().hasCoins(player.getUniqueId(), cost)) {
+            player.sendMessage(ChatColor.RED + "Pas assez de coins ! Requis: " + cost);
+            return;
+        }
+        if (!plugin.getPrisonTycoonHook().removeCoins(player.getUniqueId(), cost)) {
+            player.sendMessage(ChatColor.RED + "Erreur lors du paiement !");
+            return;
+        }
+        island.setHopperLimit(island.getHopperLimit() + 5);
+        plugin.getDatabaseManager().saveIsland(island);
+        player.sendMessage(ChatColor.GREEN + "Limite de hoppers augmentée à " + island.getHopperLimit() + ".");
+        open(player);
     }
 
-    private void openCalculator(Player player, Island island) {
-        // TODO: Implémenter un calculateur de coûts
-        player.sendMessage(ChatColor.YELLOW + "Calculateur bientôt disponible !");
+    private void handleHopperSpeed(Player player, Island island) {
+        long cost = 7500;
+        if (!plugin.getPrisonTycoonHook().hasCoins(player.getUniqueId(), cost)) {
+            player.sendMessage(ChatColor.RED + "Pas assez de coins ! Requis: " + cost);
+            return;
+        }
+        if (!plugin.getPrisonTycoonHook().removeCoins(player.getUniqueId(), cost)) {
+            player.sendMessage(ChatColor.RED + "Erreur lors du paiement !");
+            return;
+        }
+        island.setHopperTransferRate(island.getHopperTransferRate() + 8);
+        plugin.getDatabaseManager().saveIsland(island);
+        player.sendMessage(ChatColor.GREEN + "Vitesse des hoppers augmentée à " + island.getHopperTransferRate() + "/s.");
+        open(player);
     }
 }

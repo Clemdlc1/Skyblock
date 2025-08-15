@@ -17,6 +17,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockBurnEvent;
 import org.bukkit.event.block.BlockIgniteEvent;
+import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
@@ -25,6 +26,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.block.Chest;
 import org.bukkit.block.ShulkerBox;
+import org.bukkit.block.Hopper;
+import org.bukkit.inventory.ItemStack;
 
 public class IslandListener implements Listener {
 
@@ -55,9 +58,12 @@ public class IslandListener implements Listener {
 
         // Vérifier les permissions
         if (island.isMember(player.getUniqueId())) {
+            // Gestion du compteur de hoppers
+            if (event.getBlock().getType() == Material.HOPPER) {
+                island.decrementHoppers();
+            }
             // Membre ou propriétaire - toujours autorisé
             island.updateActivity();
-            plugin.getDatabaseManager().saveIsland(island);
             return;
         }
 
@@ -65,6 +71,10 @@ public class IslandListener implements Listener {
         if (!island.getFlag(Island.IslandFlag.VISITOR_BREAK)) {
             event.setCancelled(true);
             player.sendMessage(ChatColor.RED + "Vous n'êtes pas autorisé à casser des blocs sur cette île !");
+        } else {
+            if (event.getBlock().getType() == Material.HOPPER) {
+                island.decrementHoppers();
+            }
         }
     }
 
@@ -87,9 +97,19 @@ public class IslandListener implements Listener {
 
         // Vérifier les permissions
         if (island.isMember(player.getUniqueId())) {
+            // Si pose d'un hopper, vérifier la limite
+            if (event.getBlock().getType() == Material.HOPPER) {
+                int limit = island.getHopperLimit();
+                if (island.getCurrentHoppers() >= limit) {
+                    event.setCancelled(true);
+                    player.sendMessage(ChatColor.RED + "Limite de hoppers atteinte pour votre île (" + limit + ") !");
+                    return;
+                } else {
+                    island.incrementHoppers();
+                }
+            }
             // Membre ou propriétaire - toujours autorisé
             island.updateActivity();
-            plugin.getDatabaseManager().saveIsland(island);
             return;
         }
 
@@ -97,6 +117,15 @@ public class IslandListener implements Listener {
         if (!island.getFlag(Island.IslandFlag.VISITOR_PLACE)) {
             event.setCancelled(true);
             player.sendMessage(ChatColor.RED + "Vous n'êtes pas autorisé à placer des blocs sur cette île !");
+        } else if (event.getBlock().getType() == Material.HOPPER) {
+            int limit = island.getHopperLimit();
+            if (island.getCurrentHoppers() >= limit) {
+                event.setCancelled(true);
+                player.sendMessage(ChatColor.RED + "Limite de hoppers atteinte pour cette île (" + limit + ") !");
+                return;
+            } else {
+                island.incrementHoppers();
+            }
         }
     }
 
@@ -115,7 +144,6 @@ public class IslandListener implements Listener {
         // Membre ou propriétaire - toujours autorisé
         if (island.isMember(player.getUniqueId())) {
             island.updateActivity();
-            plugin.getDatabaseManager().saveIsland(island);
             return;
         }
 
@@ -142,7 +170,6 @@ public class IslandListener implements Listener {
         // Membre ou propriétaire - toujours autorisé
         if (island.isMember(player.getUniqueId())) {
             island.updateActivity();
-            plugin.getDatabaseManager().saveIsland(island);
             return;
         }
 
@@ -320,5 +347,45 @@ public class IslandListener implements Listener {
                     material.name().contains("FENCE_GATE") ||
                     material.name().contains("BED");
         };
+    }
+
+    // === OPTIMISATION DES HOPPERS ===
+    // Throttle le transfert à 1s et ajuste la quantité transférée selon l'amélioration
+    private final java.util.Map<String, Long> lastHopperMoveMs = new java.util.concurrent.ConcurrentHashMap<>();
+
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    public void onInventoryMove(InventoryMoveItemEvent event) {
+        // Détecter les mouvements initiés par un hopper de bloc
+        if (!(event.getInitiator() != null && event.getInitiator().getHolder() instanceof Hopper hopper)) {
+            return;
+        }
+
+        Location loc = hopper.getBlock().getLocation();
+        if (!isInSkyblockWorld(loc)) return;
+
+        Island island = plugin.getIslandManager().getIslandAtLocation(loc);
+        if (island == null) return;
+
+        // Throttle: 1 fois par seconde par hopper
+        String key = loc.getWorld().getName() + ":" + loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ();
+        long now = System.currentTimeMillis();
+        Long last = lastHopperMoveMs.get(key);
+        if (last != null && (now - last) < 1000L) {
+            event.setCancelled(true);
+            return;
+        }
+
+        lastHopperMoveMs.put(key, now);
+
+        // Ajuster la quantité transférée par burst
+        ItemStack moving = event.getItem();
+        if (moving == null) return;
+        int desired = Math.max(1, island.getHopperTransferRate());
+        int amount = Math.min(moving.getAmount(), desired);
+        if (amount != moving.getAmount()) {
+            ItemStack clone = moving.clone();
+            clone.setAmount(amount);
+            event.setItem(clone);
+        }
     }
 }

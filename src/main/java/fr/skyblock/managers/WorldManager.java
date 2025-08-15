@@ -338,6 +338,13 @@ public class WorldManager {
             World world = Bukkit.getWorld(worldName);
             if (world != null) {
                 world.save();
+                UUID islandId = getIslandIdFromWorldName(worldName);
+                if (islandId != null) {
+                    Island island = plugin.getDatabaseManager().loadIsland(islandId);
+                    if (island != null) {
+                        plugin.getDatabaseManager().saveIsland(island);
+                    }
+                }
             }
         }
     }
@@ -482,6 +489,14 @@ public class WorldManager {
                     if (now - last >= unloadAfterMillis) {
                         // Décharger via Multiverse (sauvegarde true)
                         mvWorldManager.getLoadedWorld(bukkitWorld).peek(loaded -> {
+                            // Sauvegarder l'île avant de décharger
+                            UUID islandId = getIslandIdFromWorldName(worldName);
+                            if (islandId != null) {
+                                Island island = plugin.getDatabaseManager().loadIsland(islandId);
+                                if (island != null) {
+                                    plugin.getDatabaseManager().saveIsland(island);
+                                }
+                            }
                             mvWorldManager.unloadWorld(org.mvplugins.multiverse.core.world.options.UnloadWorldOptions
                                     .world(loaded)
                                     .saveBukkitWorld(true)

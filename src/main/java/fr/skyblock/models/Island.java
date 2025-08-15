@@ -3,7 +3,6 @@ package fr.skyblock.models;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.bukkit.Location;
-import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.*;
 
@@ -23,6 +22,16 @@ public class Island {
     private Map<IslandFlag, Boolean> flags;
     private long creationTime;
     private long lastActivity;
+
+    // === Améliorations d'île ===
+    private int hopperLimit;               // Nombre max de hoppers autorisés
+    private int hopperTransferRate;        // Items transférés par seconde par hopper
+    private int currentHoppers;            // Compteur courant de hoppers dans le monde de l'île
+
+    // Améliorations (partiellement utilisées: GUI + data)
+    private int maxDepositChests;          // Nombre max de caisses de dépôt posables
+    private int billGenerationSpeed;       // Vitesse de génération de billets (unité arbitraire / s)
+    private int maxPrinters;               // Nombre max d'imprimantes sur l'île
 
     public enum IslandFlag {
         PVP("Autoriser le PvP"),
@@ -59,6 +68,15 @@ public class Island {
         this.flags = new HashMap<>();
         this.creationTime = System.currentTimeMillis();
         this.lastActivity = System.currentTimeMillis();
+
+        // Valeurs par défaut des améliorations
+        this.hopperLimit = 10;
+        this.hopperTransferRate = 16; // 16 items toutes les 20 ticks par défaut
+        this.currentHoppers = 0;
+
+        this.maxDepositChests = 1;
+        this.billGenerationSpeed = 1;
+        this.maxPrinters = 1;
 
         // Initialisation des flags par défaut
         initializeDefaultFlags();
@@ -162,4 +180,25 @@ public class Island {
     public long getCreationTime() { return creationTime; }
     public long getLastActivity() { return lastActivity; }
     public void setLastActivity(long lastActivity) { this.lastActivity = lastActivity; }
+
+    // === Getters/Setters Améliorations ===
+    public int getHopperLimit() { return hopperLimit; }
+    public void setHopperLimit(int hopperLimit) { this.hopperLimit = Math.max(0, hopperLimit); }
+
+    public int getHopperTransferRate() { return hopperTransferRate; }
+    public void setHopperTransferRate(int hopperTransferRate) { this.hopperTransferRate = Math.max(1, hopperTransferRate); }
+
+    public int getCurrentHoppers() { return currentHoppers; }
+    public void setCurrentHoppers(int currentHoppers) { this.currentHoppers = Math.max(0, currentHoppers); }
+    public void incrementHoppers() { this.currentHoppers = Math.max(0, this.currentHoppers + 1); }
+    public void decrementHoppers() { this.currentHoppers = Math.max(0, this.currentHoppers - 1); }
+
+    public int getMaxDepositChests() { return maxDepositChests; }
+    public void setMaxDepositChests(int maxDepositChests) { this.maxDepositChests = Math.max(0, maxDepositChests); }
+
+    public int getBillGenerationSpeed() { return billGenerationSpeed; }
+    public void setBillGenerationSpeed(int billGenerationSpeed) { this.billGenerationSpeed = Math.max(0, billGenerationSpeed); }
+
+    public int getMaxPrinters() { return maxPrinters; }
+    public void setMaxPrinters(int maxPrinters) { this.maxPrinters = Math.max(0, maxPrinters); }
 }
