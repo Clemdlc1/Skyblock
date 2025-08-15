@@ -25,7 +25,6 @@ public class Island {
 
     // === Améliorations d'île ===
     private int hopperLimit;               // Nombre max de hoppers autorisés
-    private int hopperTransferRate;        // Items transférés par seconde par hopper
     private int currentHoppers;            // Compteur courant de hoppers dans le monde de l'île
 
     // Améliorations (partiellement utilisées: GUI + data)
@@ -71,7 +70,6 @@ public class Island {
 
         // Valeurs par défaut des améliorations
         this.hopperLimit = 10;
-        this.hopperTransferRate = 16; // 16 items toutes les 20 ticks par défaut
         this.currentHoppers = 0;
 
         this.maxDepositChests = 1;
@@ -184,9 +182,6 @@ public class Island {
     // === Getters/Setters Améliorations ===
     public int getHopperLimit() { return hopperLimit; }
     public void setHopperLimit(int hopperLimit) { this.hopperLimit = Math.max(0, hopperLimit); }
-
-    public int getHopperTransferRate() { return hopperTransferRate; }
-    public void setHopperTransferRate(int hopperTransferRate) { this.hopperTransferRate = Math.max(1, hopperTransferRate); }
 
     public int getCurrentHoppers() { return currentHoppers; }
     public void setCurrentHoppers(int currentHoppers) { this.currentHoppers = Math.max(0, currentHoppers); }

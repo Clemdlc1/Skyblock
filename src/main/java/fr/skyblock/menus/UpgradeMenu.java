@@ -224,15 +224,6 @@ public class UpgradeMenu extends BaseMenu {
         boolean affordLimit = (bankCoins + playerCoins) >= 5000;
         inv.setItem(31, createItem(affordLimit ? Material.HOPPER : Material.BARRIER, ChatColor.AQUA + "Limite de Hoppers", hopperLore));
 
-        // Hopper speed
-        List<String> speedLore = new ArrayList<>();
-        speedLore.add(ChatColor.GRAY + "Vitesse actuelle: " + ChatColor.WHITE + island.getHopperTransferRate() + "/s");
-        speedLore.add("");
-        speedLore.add(ChatColor.YELLOW + "Augmente la vitesse des transferts de +8 items/s");
-        speedLore.add(ChatColor.GRAY + "Coût: " + ChatColor.GOLD + "7500 coins");
-        speedLore.add(ChatColor.GRAY + "Sources: Banque d'île (" + bankCoins + ") + Vos coins (" + playerCoins + ")");
-        boolean affordSpeed = (bankCoins + playerCoins) >= 7500;
-        inv.setItem(32, createItem(affordSpeed ? Material.REPEATER : Material.BARRIER, ChatColor.AQUA + "Vitesse des Hoppers", speedLore));
 
         // Max deposit chests (partiel)
         List<String> chestLore = new ArrayList<>();
@@ -292,7 +283,6 @@ public class UpgradeMenu extends BaseMenu {
             case 28 -> handleRevenueBoost(player, island); // Boost revenus
             case 29 -> handleAdvancedProtection(player, island); // Protection
             case 31 -> handleHopperLimit(player, island); // + Hopper limit
-            case 32 -> handleHopperSpeed(player, island); // + Hopper speed
         }
     }
 
@@ -365,21 +355,6 @@ public class UpgradeMenu extends BaseMenu {
         open(player);
     }
 
-    private void handleHopperSpeed(Player player, Island island) {
-        long cost = 7500;
-        if (!canAffordWithBankAndPlayer(island, player, cost)) {
-            player.sendMessage(ChatColor.RED + "Fonds insuffisants ! Requis: " + cost + " (banque + vos coins)");
-            return;
-        }
-        if (!payWithBankAndPlayer(island, player, cost)) {
-            player.sendMessage(ChatColor.RED + "Erreur lors du paiement !");
-            return;
-        }
-        island.setHopperTransferRate(island.getHopperTransferRate() + 8);
-        plugin.getDatabaseManager().saveIsland(island);
-        player.sendMessage(ChatColor.GREEN + "Vitesse des hoppers augmentée à " + island.getHopperTransferRate() + "/s.");
-        open(player);
-    }
 
     private boolean canAffordWithBankAndPlayer(Island island, Player player, long cost) {
         long bankCoins = (long) Math.floor(island.getBank());

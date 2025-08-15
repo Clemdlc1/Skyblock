@@ -17,7 +17,6 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockBurnEvent;
 import org.bukkit.event.block.BlockIgniteEvent;
-import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
@@ -62,7 +61,6 @@ public class IslandListener implements Listener {
             // Gestion du compteur de hoppers
             if (event.getBlock().getType() == Material.HOPPER) {
                 island.decrementHoppers();
-                plugin.getHopperTransferManager().unregisterHopper(event.getBlock().getLocation());
             }
             // Membre ou propriétaire - toujours autorisé
             island.updateActivity();
@@ -76,7 +74,6 @@ public class IslandListener implements Listener {
         } else {
             if (event.getBlock().getType() == Material.HOPPER) {
                 island.decrementHoppers();
-                plugin.getHopperTransferManager().unregisterHopper(event.getBlock().getLocation());
             }
         }
     }
@@ -109,8 +106,7 @@ public class IslandListener implements Listener {
                     return;
                 } else {
                     island.incrementHoppers();
-                    // Enregistrer le hopper pour le scheduler custom
-                    plugin.getHopperTransferManager().registerHopper(event.getBlock().getLocation());
+                    // Enregistrement retiré (plus de gestion de transfert par manager)
                 }
             }
             // Membre ou propriétaire - toujours autorisé
@@ -130,7 +126,6 @@ public class IslandListener implements Listener {
                 return;
             } else {
                 island.incrementHoppers();
-                plugin.getHopperTransferManager().registerHopper(event.getBlock().getLocation());
             }
         }
     }
@@ -355,70 +350,4 @@ public class IslandListener implements Listener {
         };
     }
 
-    // === TRANSFERT HOPPERS OPTIMISÉ PAR ÉVÉNEMENT ===
-    private final java.util.Map<String, Long> lastHopperTransferMs = new java.util.concurrent.ConcurrentHashMap<>();
-
-    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
-    public void onInventoryMove(InventoryMoveItemEvent event) {
-        if (!(event.getInitiator() != null && event.getInitiator().getHolder() instanceof Hopper hopperState)) return;
-
-        Location loc = hopperState.getBlock().getLocation();
-        if (!isInSkyblockWorld(loc)) return;
-
-        Island island = plugin.getIslandManager().getIslandAtLocation(loc);
-        if (island == null) return;
-
-        boolean pushing = event.getSource() != null && event.getSource().getHolder() instanceof Hopper;
-        boolean pulling = event.getDestination() != null && event.getDestination().getHolder() instanceof Hopper;
-        if (!pushing && !pulling) return;
-
-        String key = loc.getWorld().getName() + ":" + loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ();
-        long now = System.currentTimeMillis();
-        Long last = lastHopperTransferMs.get(key);
-        if (last != null && (now - last) < 1000L) {
-            event.setCancelled(true);
-            return;
-        }
-
-        int desired = Math.max(1, Math.min(16, island.getHopperTransferRate()));
-        Inventory source = event.getSource();
-        Inventory destination = event.getDestination();
-        int moved = transferBurst(source, destination, desired);
-
-        if (moved > 0) {
-            lastHopperTransferMs.put(key, now);
-            event.setCancelled(true);
-        }
-    }
-
-    private int transferBurst(Inventory source, Inventory destination, int maxAmount) {
-        int remaining = maxAmount;
-        int movedTotal = 0;
-        for (int slot = 0; slot < source.getSize() && remaining > 0; slot++) {
-            ItemStack stack = source.getItem(slot);
-            if (stack == null) continue;
-            int take = Math.min(stack.getAmount(), remaining);
-            if (take <= 0) continue;
-
-            ItemStack toInsert = stack.clone();
-            toInsert.setAmount(take);
-            java.util.Map<Integer, ItemStack> leftover = destination.addItem(toInsert);
-            int notFit = 0;
-            for (ItemStack l : leftover.values()) notFit += l.getAmount();
-            int inserted = take - notFit;
-            if (inserted <= 0) continue;
-
-            int newAmount = stack.getAmount() - inserted;
-            if (newAmount <= 0) {
-                source.clear(slot);
-            } else {
-                stack.setAmount(newAmount);
-                source.setItem(slot, stack);
-            }
-
-            movedTotal += inserted;
-            remaining -= inserted;
-        }
-        return movedTotal;
-    }
 }

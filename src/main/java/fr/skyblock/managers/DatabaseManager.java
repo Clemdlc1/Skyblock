@@ -73,7 +73,6 @@ public class DatabaseManager {
                 "creation_time BIGINT DEFAULT 0," +
                 "last_activity BIGINT DEFAULT 0," +
                 "hopper_limit INT DEFAULT 10," +
-                "hopper_transfer_rate INT DEFAULT 16," +
                 "current_hoppers INT DEFAULT 0," +
                 "max_deposit_chests INT DEFAULT 1," +
                 "bill_generation_speed INT DEFAULT 1," +
@@ -124,14 +123,14 @@ public class DatabaseManager {
     public void saveIsland(Island island) {
         islandsCache.put(island.getId(), island);
 
-        String query = "INSERT INTO islands (id, owner_uuid, name, level, bank, size, center_world, center_x, center_y, center_z, center_yaw, center_pitch, members, flags, creation_time, last_activity, hopper_limit, hopper_transfer_rate, current_hoppers, max_deposit_chests, bill_generation_speed, max_printers) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+        String query = "INSERT INTO islands (id, owner_uuid, name, level, bank, size, center_world, center_x, center_y, center_z, center_yaw, center_pitch, members, flags, creation_time, last_activity, hopper_limit, current_hoppers, max_deposit_chests, bill_generation_speed, max_printers) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
                 "ON CONFLICT (id) DO UPDATE SET " +
                 "owner_uuid = EXCLUDED.owner_uuid, name = EXCLUDED.name, level = EXCLUDED.level, bank = EXCLUDED.bank, size = EXCLUDED.size, " +
                 "center_world = EXCLUDED.center_world, center_x = EXCLUDED.center_x, center_y = EXCLUDED.center_y, center_z = EXCLUDED.center_z, " +
                 "center_yaw = EXCLUDED.center_yaw, center_pitch = EXCLUDED.center_pitch, members = EXCLUDED.members, flags = EXCLUDED.flags, " +
                 "creation_time = EXCLUDED.creation_time, last_activity = EXCLUDED.last_activity, " +
-                "hopper_limit = EXCLUDED.hopper_limit, hopper_transfer_rate = EXCLUDED.hopper_transfer_rate, current_hoppers = EXCLUDED.current_hoppers, " +
+                "hopper_limit = EXCLUDED.hopper_limit, current_hoppers = EXCLUDED.current_hoppers, " +
                 "max_deposit_chests = EXCLUDED.max_deposit_chests, bill_generation_speed = EXCLUDED.bill_generation_speed, max_printers = EXCLUDED.max_printers";
 
         try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(query)) {
@@ -165,11 +164,10 @@ public class DatabaseManager {
             ps.setLong(16, island.getLastActivity());
 
             ps.setInt(17, island.getHopperLimit());
-            ps.setInt(18, island.getHopperTransferRate());
-            ps.setInt(19, island.getCurrentHoppers());
-            ps.setInt(20, island.getMaxDepositChests());
-            ps.setInt(21, island.getBillGenerationSpeed());
-            ps.setInt(22, island.getMaxPrinters());
+            ps.setInt(18, island.getCurrentHoppers());
+            ps.setInt(19, island.getMaxDepositChests());
+            ps.setInt(20, island.getBillGenerationSpeed());
+            ps.setInt(21, island.getMaxPrinters());
 
             ps.executeUpdate();
             plugin.getLogger().info("Île sauvegardée: " + island.getId());
@@ -478,8 +476,6 @@ public class DatabaseManager {
         // Charger améliorations avec valeurs par défaut simples
         int hopperLimit = rs.getInt("hopper_limit");
         island.setHopperLimit(hopperLimit <= 0 ? 10 : hopperLimit);
-        int rate = rs.getInt("hopper_transfer_rate");
-        island.setHopperTransferRate(rate <= 0 ? 16 : rate);
         island.setCurrentHoppers(Math.max(0, rs.getInt("current_hoppers")));
         int maxDeposit = rs.getInt("max_deposit_chests");
         island.setMaxDepositChests(maxDeposit <= 0 ? 1 : maxDeposit);

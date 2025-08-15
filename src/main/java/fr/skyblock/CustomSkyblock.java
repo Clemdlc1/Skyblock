@@ -23,7 +23,6 @@ public final class CustomSkyblock extends JavaPlugin {
     private InvitationManager invitationManager;
     private TaskManager taskManager;
     private WarpManager warpManager;
-    private HopperTransferManager hopperTransferManager;
     private MultiverseCoreApi multiverseCoreApi;
     private PrisonTycoonHook prisonTycoonHook;
 
@@ -57,7 +56,6 @@ public final class CustomSkyblock extends JavaPlugin {
         this.menuManager = new MenuManager(this);
         this.warpManager = new WarpManager(this);
         this.prisonTycoonHook = new PrisonTycoonHook(this);
-        this.hopperTransferManager = new HopperTransferManager(this);
 
         // Vérification du hook PrisonTycoon
         if (!prisonTycoonHook.isEnabled()) {
@@ -159,9 +157,7 @@ public final class CustomSkyblock extends JavaPlugin {
         return warpManager;
     }
 
-    public HopperTransferManager getHopperTransferManager() {
-        return hopperTransferManager;
-    }
+    // HopperTransferManager retiré (Spigot gère les transferts)
 
     public MultiverseCoreApi getMultiverseCoreApi() {
         return multiverseCoreApi;
