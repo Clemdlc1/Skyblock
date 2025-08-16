@@ -180,7 +180,11 @@ public class PrinterManager {
         ItemStack paper = new ItemStack(Material.PAPER);
         ItemMeta meta = paper.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(ChatColor.AQUA + "Billet Tier " + tier + ChatColor.GRAY + " (" + value + "$)");
+            meta.setDisplayName(ChatColor.AQUA + "Billet Tier " + tier);
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.GRAY + "Tier " + tier + " (" + value + "$)");
+            lore.add(ChatColor.GRAY + "Utiliser /sellall ou un tank pour vendre vos billets");
+            meta.setLore(lore);
             paper.setItemMeta(meta);
         }
         return paper;

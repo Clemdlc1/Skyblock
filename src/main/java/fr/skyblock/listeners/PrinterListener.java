@@ -101,16 +101,12 @@ public class PrinterListener implements Listener {
         if (printer == null) return;
 
         Player player = event.getPlayer();
-        // Shift-right click => ouvrir menu si proprio
-        if (player.isSneaking()) {
-            if (!player.getUniqueId().equals(printer.getOwnerUuid())) {
-                player.sendMessage(ChatColor.RED + "Seul le propriétaire peut améliorer cette imprimante.");
-                return;
-            }
+        if (player.getUniqueId().equals(printer.getOwnerUuid())) {
             event.setCancelled(true);
             plugin.getMenuManager().openPrinterUpgradeMenu(player, printer);
             return;
         }
+
         // Sinon, afficher des infos
         event.setCancelled(true);
         long value = plugin.getConfig().getLong("printers." + printer.getTier() + ".value", printer.getTier() * 10L);
