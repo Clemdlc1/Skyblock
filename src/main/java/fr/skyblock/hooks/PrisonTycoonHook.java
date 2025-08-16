@@ -222,10 +222,30 @@ public class PrisonTycoonHook {
 
     /**
      * Nombre de slots d'imprimantes additionnels pour un joueur (via PTycoon).
-     * Par défaut 0; à brancher sur l'API PrisonTycoon quand disponible.
      */
     public int getAdditionalPrinterSlots(UUID playerId) {
         return prisonAPI.getMaxPrinterSlots(playerId);
+    }
+
+    /**
+     * Bonus de vente du joueur (tanks, etc.)
+     */
+    public double getSellBonus(Player player) {
+        return prisonAPI.getTotalBonusMultiplier(player, fr.prisontycoon.managers.GlobalBonusManager.BonusCategory.SELL_BONUS);
+    }
+
+    // === Tanks par monde ===
+
+    public void loadWorldTanks(String worldName) {
+        prisonAPI.loadWorldTanks(worldName);
+    }
+
+    public void saveWorldTanks(String worldName) {
+        prisonAPI.saveWorldTanks(worldName);
+    }
+
+    public void unloadWorldTanks(String worldName) {
+        prisonAPI.unloadWorldTanks(worldName);
     }
 
     // === TRANSFERTS ===
@@ -267,35 +287,5 @@ public class PrisonTycoonHook {
         } else {
             return String.valueOf(number);
         }
-    }
-
-    public double getSellBonus(Player player) {
-        return prisonAPI.getTotalBonusMultiplier(player, fr.prisontycoon.managers.GlobalBonusManager.BonusCategory.SELL_BONUS);
-    }
-
-    // === CONFIGURATION ===
-
-    public long getBaseExpandCost() {
-        return baseExpandCost;
-    }
-
-    public long getBaseLevelCost() {
-        return baseLevelCost;
-    }
-
-    public void setBaseExpandCost(long cost) {
-        this.baseExpandCost = cost;
-    }
-
-    public void setBaseLevelCost(long cost) {
-        this.baseLevelCost = cost;
-    }
-
-    /**
-     * Recharge la configuration
-     */
-    public void reloadConfig() {
-        loadConfig();
-        skyblockPlugin.getLogger().info("Configuration du hook PrisonTycoon rechargée");
     }
 }

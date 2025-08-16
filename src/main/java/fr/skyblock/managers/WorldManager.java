@@ -113,7 +113,7 @@ public class WorldManager {
                 mvWorldManager.getWorld(world.getName()).peek(mvWorld -> mvWorld.setAutoLoad(false));
             } catch (Exception ignored) {
             }
-
+            plugin.getPrisonTycoonHook().loadWorldTanks(world.getName());
             return world;
 
         } catch (Exception e) {
@@ -249,6 +249,8 @@ public class WorldManager {
                 if (islandId != null) {
                     islandWorlds.put(islandId, worldName);
                     plugin.getLogger().info("Monde d'île chargé : " + worldName + " -> " + islandId);
+                    plugin.getPrisonTycoonHook().loadWorldTanks(worldName);
+
                 }
             }
         }
@@ -345,6 +347,7 @@ public class WorldManager {
                         plugin.getDatabaseManager().saveIsland(island);
                     }
                 }
+                plugin.getPrisonTycoonHook().saveWorldTanks(worldName);
             }
         }
     }
@@ -392,6 +395,12 @@ public class WorldManager {
             }
         } catch (Exception e) {
             plugin.getLogger().warning("Erreur lors de la (re)mise à disposition du monde d'île: " + e.getMessage());
+        }
+
+        // Charger les tanks à l’activation/chargement
+        World w = getIslandWorld(island);
+        if (w != null) {
+            plugin.getPrisonTycoonHook().loadWorldTanks(w.getName());
         }
 
         return getIslandWorld(island);
@@ -492,6 +501,10 @@ public class WorldManager {
                         if (islandId != null) {
                             plugin.getPrinterManager().clearNametagsForIsland(islandId, bukkitWorld);
                         }
+                        // Sauvegarder tanks
+                        plugin.getPrisonTycoonHook().saveWorldTanks(worldName);
+                        // Décharger tanks
+                        plugin.getPrisonTycoonHook().unloadWorldTanks(worldName);
                         // Décharger via Multiverse (sauvegarde true)
                         mvWorldManager.getLoadedWorld(bukkitWorld).peek(loaded -> {
                             // Sauvegarder l'île avant de décharger
@@ -525,6 +538,10 @@ public class WorldManager {
                 if (!isIslandWorld(worldName)) continue;
                 if (!world.getPlayers().isEmpty()) continue;
 
+                // Sauvegarder & décharger tanks avant unload
+                plugin.getPrisonTycoonHook().saveWorldTanks(worldName);
+                plugin.getPrisonTycoonHook().unloadWorldTanks(worldName);
+                plugin.getLogger().info("Tanks sauvegardés et déchargés pour " + worldName);
                 mvWorldManager.getLoadedWorld(world).peek(loaded -> {
                     mvWorldManager.unloadWorld(org.mvplugins.multiverse.core.world.options.UnloadWorldOptions
                             .world(loaded)
