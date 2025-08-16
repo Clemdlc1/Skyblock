@@ -62,6 +62,7 @@ public final class CustomSkyblock extends JavaPlugin {
         // Initialisation des managers
         this.databaseManager = new DatabaseManager(this);
         this.economyManager = new EconomyManager(this);
+        this.prisonTycoonHook = new PrisonTycoonHook(this);
         this.worldManager = new WorldManager(this);
         this.schematicManager = new SchematicManager(this);
         this.invitationManager = new InvitationManager(this);
@@ -69,7 +70,6 @@ public final class CustomSkyblock extends JavaPlugin {
         this.menuManager = new MenuManager(this);
         this.warpManager = new WarpManager(this);
         this.printerManager = new PrinterManager(this);
-        this.prisonTycoonHook = new PrisonTycoonHook(this);
 
         // Vérification du hook PrisonTycoon
         if (!prisonTycoonHook.isEnabled()) {

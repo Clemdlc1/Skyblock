@@ -26,15 +26,13 @@ public class PrinterUpgradeMenu extends BaseMenu {
             player.sendMessage(ChatColor.RED + "Aucune imprimante associée.");
             return;
         }
-        Inventory inv = Bukkit.createInventory(player, InventoryType.DROPPER, ChatColor.DARK_AQUA + "Upgrade Imprimante");
+        Inventory inv = Bukkit.createInventory(player, InventoryType.DROPPER, ChatColor.DARK_AQUA + "Amélioration de l'Imprimante");
 
         long nextTier = printer.getTier() + 1L;
         long cost = plugin.getConfig().getLong("printers." + nextTier + ".upgrade-cost", nextTier * 200);
 
         inv.setItem(4, createItem(Material.NETHER_STAR, ChatColor.GOLD + "Améliorer vers T" + nextTier,
                 ChatColor.GRAY + "Coût: " + ChatColor.YELLOW + cost + " coins"));
-
-        inv.setItem(8, createBackButton());
 
         fillEmptySlots(inv, Material.CYAN_STAINED_GLASS_PANE);
 

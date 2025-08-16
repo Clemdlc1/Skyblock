@@ -143,7 +143,7 @@ public class PrinterManager {
                             continue; // propriétaire n'est plus membre => ne pas générer
                         }
 
-                        long intervalMs = Math.max(5000, (long) (20000.0 / Math.max(1, island.getBillGenerationSpeed())));
+                        long intervalMs = Math.max(5000, (long) (60000.0 / Math.max(1, island.getBillGenerationSpeed())));
                         long now = System.currentTimeMillis();
                         if (printer.getLastGeneratedAt() == 0L || now - printer.getLastGeneratedAt() >= intervalMs) {
                             // Vérifier que le bloc est bien un dropper présent
@@ -171,7 +171,7 @@ public class PrinterManager {
                     }
                 }
             }
-        }.runTaskTimer(plugin, 20L, 20L); // chaque seconde
+        }.runTaskTimer(plugin, 20L * 5L, 20L * 5L); // toutes les 5 secondes
     }
 
     private ItemStack createBillForTier(int tier) {
