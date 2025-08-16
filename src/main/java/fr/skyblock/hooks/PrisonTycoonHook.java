@@ -269,6 +269,10 @@ public class PrisonTycoonHook {
         }
     }
 
+    public double getSellBonus(Player player) {
+        return prisonAPI.getTotalBonusMultiplier(player, fr.prisontycoon.managers.GlobalBonusManager.BonusCategory.SELL_BONUS);
+    }
+
     // === CONFIGURATION ===
 
     public long getBaseExpandCost() {

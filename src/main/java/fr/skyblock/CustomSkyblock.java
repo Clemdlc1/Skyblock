@@ -174,8 +174,6 @@ public final class CustomSkyblock extends JavaPlugin {
 
     public PrinterManager getPrinterManager() { return printerManager; }
 
-    // HopperTransferManager retiré (Spigot gère les transferts)
-
     public MultiverseCoreApi getMultiverseCoreApi() {
         return multiverseCoreApi;
     }

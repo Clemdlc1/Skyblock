@@ -24,6 +24,8 @@ public class PrinterManager {
 
     private final CustomSkyblock plugin;
     private final NamespacedKey printerKey;
+    private final NamespacedKey nametagKey;
+    private final NamespacedKey nametagKindKey;
 
     // Cache: île -> armor stands (nametags) actifs par position
     private final Map<UUID, Map<String, UUID>> islandNametags = new HashMap<>();
@@ -31,6 +33,8 @@ public class PrinterManager {
     public PrinterManager(CustomSkyblock plugin) {
         this.plugin = plugin;
         this.printerKey = new NamespacedKey(plugin, "printer_tier");
+        this.nametagKey = new NamespacedKey(plugin, "nametag_key");
+        this.nametagKindKey = new NamespacedKey(plugin, "nametag_kind");
         startGenerationTask();
     }
 
@@ -42,7 +46,7 @@ public class PrinterManager {
             meta.setDisplayName(ChatColor.GOLD + "Imprimante Tier " + tier);
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.GRAY + "Génère des billets automatiquement");
-            lore.add(ChatColor.YELLOW + "Tier: " + tier);
+            lore.add(ChatColor.YELLOW + "Billet tier: " + tier + " ($" + plugin.getConfig().getLong("printers." + tier + ".value", tier * 10L) + ")");
             meta.setLore(lore);
             // Tag tier
             meta.getPersistentDataContainer().set(printerKey, PersistentDataType.INTEGER, tier);
@@ -195,26 +199,47 @@ public class PrinterManager {
         Map<String, UUID> tags = islandNametags.get(island.getId());
 
         if (someoneNear) {
-            if (!tags.containsKey(key) || getEntity(world, tags.get(key)) == null) {
-                ArmorStand as = (ArmorStand) world.spawnEntity(loc, EntityType.ARMOR_STAND);
-                as.setInvisible(true);
-                as.setMarker(true);
-                as.setCustomNameVisible(true);
-                as.setCustomName(ChatColor.GOLD + "Imprimante T" + printer.getTier());
-                tags.put(key, as.getUniqueId());
+            UUID existing = tags.get(key);
+            ArmorStand asFound = findExistingNametag(world, key, loc);
+            if (existing == null || getEntity(world, existing) == null) {
+                if (asFound == null) {
+                    ArmorStand as = (ArmorStand) world.spawnEntity(loc, EntityType.ARMOR_STAND);
+                    as.setInvisible(true);
+                    as.setMarker(true);
+                    as.setCustomNameVisible(true);
+                    as.setCustomName(ChatColor.GOLD + "Imprimante T" + printer.getTier());
+                    // Marqueurs PDC
+                    PersistentDataContainer pdc = as.getPersistentDataContainer();
+                    pdc.set(nametagKey, PersistentDataType.STRING, key);
+                    pdc.set(nametagKindKey, PersistentDataType.STRING, "printer");
+                    tags.put(key, as.getUniqueId());
+                } else {
+                    asFound.setCustomName(ChatColor.GOLD + "Imprimante T" + printer.getTier());
+                    tags.put(key, asFound.getUniqueId());
+                }
             } else {
-                Entity ent = getEntity(world, tags.get(key));
+                Entity ent = getEntity(world, existing);
                 if (ent instanceof ArmorStand as) {
                     as.setCustomName(ChatColor.GOLD + "Imprimante T" + printer.getTier());
                 }
             }
         } else {
-            if (tags.containsKey(key)) {
-                Entity ent = getEntity(world, tags.get(key));
-                if (ent != null) ent.remove();
-                tags.remove(key);
+            removeNametag(island.getId(), world, printer.getX(), printer.getY(), printer.getZ());
+        }
+    }
+
+    private ArmorStand findExistingNametag(World world, String key, Location around) {
+        for (Entity e : world.getNearbyEntities(around, 1.0, 1.5, 1.0)) {
+            if (e instanceof ArmorStand as) {
+                PersistentDataContainer pdc = as.getPersistentDataContainer();
+                if (pdc.has(nametagKey, PersistentDataType.STRING) &&
+                        key.equals(pdc.get(nametagKey, PersistentDataType.STRING)) &&
+                        "printer".equals(pdc.get(nametagKindKey, PersistentDataType.STRING))) {
+                    return as;
+                }
             }
         }
+        return null;
     }
 
     private Entity getEntity(World world, UUID uuid) {
@@ -226,24 +251,45 @@ public class PrinterManager {
 
     public void removeNametag(UUID islandId, World world, int x, int y, int z) {
         Map<String, UUID> tags = islandNametags.get(islandId);
-        if (tags == null) return;
         String key = x + ":" + y + ":" + z;
-        UUID tagId = tags.remove(key);
-        if (tagId != null) {
-            Entity ent = getEntity(world, tagId);
-            if (ent != null) ent.remove();
+        if (tags != null) {
+            UUID tagId = tags.remove(key);
+            if (tagId != null) {
+                Entity ent = getEntity(world, tagId);
+                if (ent != null) ent.remove();
+            }
+        }
+        // Supprimer tout ArmorStand marqué à cette position, même non tracké
+        for (Entity e : world.getNearbyEntities(new Location(world, x + 0.5, y + 1.8, z + 0.5), 1.0, 1.5, 1.0)) {
+            if (e instanceof ArmorStand as) {
+                PersistentDataContainer pdc = as.getPersistentDataContainer();
+                if ("printer".equals(pdc.get(nametagKindKey, PersistentDataType.STRING)) &&
+                        key.equals(pdc.get(nametagKey, PersistentDataType.STRING))) {
+                    as.remove();
+                }
+            }
         }
     }
 
     public void clearNametagsForIsland(UUID islandId, World world) {
         Map<String, UUID> tags = islandNametags.get(islandId);
-        if (tags == null) return;
-        for (UUID tagId : new ArrayList<>(tags.values())) {
-            Entity ent = getEntity(world, tagId);
-            if (ent != null) ent.remove();
+        if (tags != null) {
+            for (UUID tagId : new ArrayList<>(tags.values())) {
+                Entity ent = getEntity(world, tagId);
+                if (ent != null) ent.remove();
+            }
+            tags.clear();
+            islandNametags.remove(islandId);
         }
-        tags.clear();
-        islandNametags.remove(islandId);
+        // Supprimer tous les nametags d'imprimantes présents dans le monde (sécurité contre doublons)
+        for (Entity e : world.getEntities()) {
+            if (e instanceof ArmorStand as) {
+                PersistentDataContainer pdc = as.getPersistentDataContainer();
+                if ("printer".equals(pdc.get(nametagKindKey, PersistentDataType.STRING))) {
+                    as.remove();
+                }
+            }
+        }
     }
 }
 

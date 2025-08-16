@@ -97,6 +97,8 @@ public class PlayerListener implements Listener {
             // Obtenir l'île associée au monde
             Island island = plugin.getIslandManager().getIslandFromWorld(to.getWorld());
             if (island != null) {
+                // Clear nametags pour éviter doublons
+                plugin.getPrinterManager().clearNametagsForIsland(island.getId(), to.getWorld());
                 handleIslandEntry(player, island);
                 plugin.getWorldManager().markPlayerEntered(to.getWorld().getName());
             }
@@ -106,6 +108,10 @@ public class PlayerListener implements Listener {
             // Si le monde quitté est un monde d'île et qu'il n'a plus de joueurs, marquer le départ
             Location from = event.getFrom();
             if (from != null && from.getWorld() != null && plugin.getIslandManager().isIslandWorld(from.getWorld())) {
+                Island island = plugin.getIslandManager().getIslandFromWorld(from.getWorld());
+                if (island != null) {
+                    plugin.getPrinterManager().clearNametagsForIsland(island.getId(), from.getWorld());
+                }
                 if (from.getWorld().getPlayers().size() <= 1) { // le joueur qui part était le dernier
                     plugin.getWorldManager().markPlayerLeft(from.getWorld().getName());
                 }
@@ -130,12 +136,14 @@ public class PlayerListener implements Listener {
             Island toIsland = toIslandWorld ? plugin.getIslandManager().getIslandFromWorld(to.getWorld()) : null;
 
             if (fromIsland != null) {
+                plugin.getPrinterManager().clearNametagsForIsland(fromIsland.getId(), from.getWorld());
                 handleIslandExit(player, fromIsland);
                 if (from.getWorld() != null && from.getWorld().getPlayers().size() <= 1) {
                     plugin.getWorldManager().markPlayerLeft(from.getWorld().getName());
                 }
             }
             if (toIsland != null) {
+                plugin.getPrinterManager().clearNametagsForIsland(toIsland.getId(), to.getWorld());
                 handleIslandEntry(player, toIsland);
                 if (to.getWorld() != null) {
                     plugin.getWorldManager().markPlayerEntered(to.getWorld().getName());
@@ -263,6 +271,8 @@ public class PlayerListener implements Listener {
             // Vérifier s'il est sur une île
             Island island = plugin.getIslandManager().getIslandFromWorld(player.getWorld());
             if (island != null) {
+                // Clear nametags pour éviter doublons à l’arrivée (si monde pré-chargé)
+                plugin.getPrinterManager().clearNametagsForIsland(island.getId(), player.getWorld());
                 plugin.getIslandManager().updateWorldBorder(player, island);
             }
         }
