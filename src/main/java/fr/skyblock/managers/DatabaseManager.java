@@ -76,7 +76,8 @@ public class DatabaseManager {
                 "current_hoppers INT DEFAULT 0," +
                 "max_deposit_chests INT DEFAULT 1," +
                 "bill_generation_speed INT DEFAULT 1," +
-                "max_printers INT DEFAULT 1" +
+                "max_printers INT DEFAULT 1," +
+                "printers TEXT" +
                 ");";
 
         // CORRECTION : Supprimer l'ancienne contrainte si elle existe et recréer correctement
@@ -97,8 +98,12 @@ public class DatabaseManager {
         String addForeignKey = "ALTER TABLE skyblock_players ADD CONSTRAINT skyblock_players_island_id_fkey " +
                 "FOREIGN KEY (island_id) REFERENCES islands(id) ON DELETE SET NULL;";
 
+        // Assurer la présence de la colonne printers si la table existe déjà
+        String addPrintersColumn = "ALTER TABLE IF EXISTS islands ADD COLUMN IF NOT EXISTS printers TEXT";
+
         try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute(islandsTable);
+            stmt.execute(addPrintersColumn);
             stmt.execute(dropOldConstraint); // Supprimer l'ancienne contrainte incorrecte
             stmt.execute(playersTable);
 
@@ -123,15 +128,15 @@ public class DatabaseManager {
     public void saveIsland(Island island) {
         islandsCache.put(island.getId(), island);
 
-        String query = "INSERT INTO islands (id, owner_uuid, name, level, bank, size, center_world, center_x, center_y, center_z, center_yaw, center_pitch, members, flags, creation_time, last_activity, hopper_limit, current_hoppers, max_deposit_chests, bill_generation_speed, max_printers) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+        String query = "INSERT INTO islands (id, owner_uuid, name, level, bank, size, center_world, center_x, center_y, center_z, center_yaw, center_pitch, members, flags, creation_time, last_activity, hopper_limit, current_hoppers, max_deposit_chests, bill_generation_speed, max_printers, printers) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
                 "ON CONFLICT (id) DO UPDATE SET " +
                 "owner_uuid = EXCLUDED.owner_uuid, name = EXCLUDED.name, level = EXCLUDED.level, bank = EXCLUDED.bank, size = EXCLUDED.size, " +
                 "center_world = EXCLUDED.center_world, center_x = EXCLUDED.center_x, center_y = EXCLUDED.center_y, center_z = EXCLUDED.center_z, " +
                 "center_yaw = EXCLUDED.center_yaw, center_pitch = EXCLUDED.center_pitch, members = EXCLUDED.members, flags = EXCLUDED.flags, " +
                 "creation_time = EXCLUDED.creation_time, last_activity = EXCLUDED.last_activity, " +
                 "hopper_limit = EXCLUDED.hopper_limit, current_hoppers = EXCLUDED.current_hoppers, " +
-                "max_deposit_chests = EXCLUDED.max_deposit_chests, bill_generation_speed = EXCLUDED.bill_generation_speed, max_printers = EXCLUDED.max_printers";
+                "max_deposit_chests = EXCLUDED.max_deposit_chests, bill_generation_speed = EXCLUDED.bill_generation_speed, max_printers = EXCLUDED.max_printers, printers = EXCLUDED.printers";
 
         try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, island.getId().toString());
@@ -168,6 +173,7 @@ public class DatabaseManager {
             ps.setInt(19, island.getMaxDepositChests());
             ps.setInt(20, island.getBillGenerationSpeed());
             ps.setInt(21, island.getMaxPrinters());
+            ps.setString(22, gson.toJson(island.getPrinters()));
 
             ps.executeUpdate();
             plugin.getLogger().info("Île sauvegardée: " + island.getId());
@@ -501,6 +507,16 @@ public class DatabaseManager {
             Map<Island.IslandFlag, Boolean> flags = gson.fromJson(flagsJson, flagsType);
             if (flags != null) {
                 flags.forEach(island::setFlag);
+            }
+        }
+
+        // Charger les imprimantes
+        String printersJson = rs.getString("printers");
+        if (printersJson != null && !printersJson.isEmpty()) {
+            Type printersType = new TypeToken<java.util.List<fr.skyblock.models.MoneyPrinter>>() {}.getType();
+            java.util.List<fr.skyblock.models.MoneyPrinter> printers = gson.fromJson(printersJson, printersType);
+            if (printers != null) {
+                island.setPrinters(printers);
             }
         }
 

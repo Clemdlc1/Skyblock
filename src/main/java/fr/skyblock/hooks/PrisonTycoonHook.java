@@ -220,6 +220,19 @@ public class PrisonTycoonHook {
         return isEnabled() ? prisonAPI.getBeacons(playerId) : 0;
     }
 
+    /**
+     * Nombre de slots d'imprimantes additionnels pour un joueur (via PTycoon).
+     * Par défaut 0; à brancher sur l'API PrisonTycoon quand disponible.
+     */
+    public int getAdditionalPrinterSlots(UUID playerId) {
+        try {
+            // Placeholder: retourner 0 tant que l'API ne fournit pas l'info
+            return 0;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     // === TRANSFERTS ===
 
     public boolean transferCoins(UUID fromPlayer, UUID toPlayer, long amount) {

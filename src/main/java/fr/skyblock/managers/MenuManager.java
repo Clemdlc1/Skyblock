@@ -3,7 +3,6 @@ package fr.skyblock.managers;
 import fr.skyblock.CustomSkyblock;
 import fr.skyblock.menus.*;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Listener;
 
 import java.util.Map;
 import java.util.UUID;
@@ -21,6 +20,7 @@ public class MenuManager {
     private final FlagsMenu flagsMenu;
     private final BankMenu bankMenu;
     private final UpgradeMenu upgradeMenu;
+    private final PrinterUpgradeMenu printerUpgradeMenu;
     private final SchematicMenu schematicMenu;
     private final WarpMenu warpMenu;
 
@@ -33,6 +33,7 @@ public class MenuManager {
         this.flagsMenu = new FlagsMenu(plugin, this);
         this.bankMenu = new BankMenu(plugin, this);
         this.upgradeMenu = new UpgradeMenu(plugin, this);
+        this.printerUpgradeMenu = new PrinterUpgradeMenu(plugin, this);
         this.schematicMenu = new SchematicMenu(plugin, this);
         this.warpMenu = new WarpMenu(plugin, this);
     }
@@ -57,6 +58,11 @@ public class MenuManager {
 
     public void openUpgradeMenu(Player player) {
         upgradeMenu.open(player);
+    }
+
+    public void openPrinterUpgradeMenu(Player player, fr.skyblock.models.MoneyPrinter printer) {
+        setMenuData(player.getUniqueId(), "printer", printer);
+        printerUpgradeMenu.open(player);
     }
 
     public void openSchematicMenu(Player player) {
@@ -108,6 +114,7 @@ public class MenuManager {
             case "flags" -> flagsMenu.handleClick(player, slot);
             case "bank" -> bankMenu.handleClick(player, slot);
             case "upgrade" -> upgradeMenu.handleClick(player, slot);
+            case "printer_upgrade" -> printerUpgradeMenu.handleClick(player, slot);
             case "schematic" -> schematicMenu.handleClick(player, slot);
             case "warp" -> warpMenu.handleClick(player, slot);
             case "player_warps" -> warpMenu.handlePlayerWarpsClick(player, slot);

@@ -275,3 +275,6 @@ advanced:
   # Anti-spam
   command-cooldown: 1  # secondes entre les commandes
   warp-cooldown: 5     # secondes entre les téléportations
+
+# Imprimantes (fusion de printer.yml au démarrage)
+printers: {}

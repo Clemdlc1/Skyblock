@@ -32,6 +32,9 @@ public class Island {
     private int billGenerationSpeed;       // Vitesse de génération de billets (unité arbitraire / s)
     private int maxPrinters;               // Nombre max d'imprimantes sur l'île
 
+    // Imprimantes stockées dans l'île (persistées en JSON)
+    private List<MoneyPrinter> printers;
+
     public enum IslandFlag {
         PVP("Autoriser le PvP"),
         MOB_SPAWNING("Spawn des mobs"),
@@ -75,6 +78,8 @@ public class Island {
         this.maxDepositChests = 1;
         this.billGenerationSpeed = 1;
         this.maxPrinters = 1;
+
+        this.printers = new ArrayList<>();
 
         // Initialisation des flags par défaut
         initializeDefaultFlags();
@@ -196,4 +201,42 @@ public class Island {
 
     public int getMaxPrinters() { return maxPrinters; }
     public void setMaxPrinters(int maxPrinters) { this.maxPrinters = Math.max(0, maxPrinters); }
+
+    // === Imprimantes ===
+    public List<MoneyPrinter> getPrinters() {
+        return new ArrayList<>(printers);
+    }
+
+    public void setPrinters(List<MoneyPrinter> printers) {
+        this.printers = (printers != null) ? new ArrayList<>(printers) : new ArrayList<>();
+    }
+
+    public void addPrinter(MoneyPrinter printer) {
+        if (this.printers == null) this.printers = new ArrayList<>();
+        this.printers.add(printer);
+    }
+
+    public boolean removePrinterById(UUID printerId) {
+        if (this.printers == null) return false;
+        return this.printers.removeIf(p -> p.getId().equals(printerId));
+    }
+
+    public MoneyPrinter findPrinterAt(int x, int y, int z) {
+        if (this.printers == null) return null;
+        for (MoneyPrinter p : printers) {
+            if (p.getX() == x && p.getY() == y && p.getZ() == z) {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    public int countPrintersOwnedBy(UUID ownerUuid) {
+        if (this.printers == null) return 0;
+        int count = 0;
+        for (MoneyPrinter p : printers) {
+            if (p.getOwnerUuid().equals(ownerUuid)) count++;
+        }
+        return count;
+    }
 }

@@ -7,6 +7,7 @@ import fr.skyblock.listeners.PlayerListener;
 import fr.skyblock.listeners.IslandListener;
 import fr.skyblock.managers.*;
 import fr.skyblock.hooks.PrisonTycoonHook;
+import fr.skyblock.listeners.PrinterListener;
 
 import org.bukkit.plugin.java.JavaPlugin;
 import org.mvplugins.multiverse.core.MultiverseCoreApi;
@@ -23,6 +24,7 @@ public final class CustomSkyblock extends JavaPlugin {
     private InvitationManager invitationManager;
     private TaskManager taskManager;
     private WarpManager warpManager;
+    private PrinterManager printerManager;
     private MultiverseCoreApi multiverseCoreApi;
     private PrisonTycoonHook prisonTycoonHook;
 
@@ -38,6 +40,17 @@ public final class CustomSkyblock extends JavaPlugin {
         // Sauvegarde de la configuration par défaut
         saveDefaultConfig();
         loadConfig();
+
+        // Charger printer.yml dans la config principale pour simplifier l'accès (merge)
+        try {
+            java.io.File printerCfgFile = new java.io.File(getDataFolder(), "printer.yml");
+            if (!printerCfgFile.exists()) {
+                saveResource("printer.yml", false);
+            }
+            org.bukkit.configuration.file.YamlConfiguration printerCfg = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(printerCfgFile);
+            getConfig().set("printers", printerCfg.getConfigurationSection("tiers").getValues(false));
+            saveConfig();
+        } catch (Exception ignored) {}
 
         // Vérification de Multiverse Core AVANT d'initialiser les managers qui en dépendent
         if (!setupMultiverse()) {
@@ -55,6 +68,7 @@ public final class CustomSkyblock extends JavaPlugin {
         this.islandManager = new IslandManager(this);
         this.menuManager = new MenuManager(this);
         this.warpManager = new WarpManager(this);
+        this.printerManager = new PrinterManager(this);
         this.prisonTycoonHook = new PrisonTycoonHook(this);
 
         // Vérification du hook PrisonTycoon
@@ -72,6 +86,7 @@ public final class CustomSkyblock extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new IslandListener(this), this);
         getServer().getPluginManager().registerEvents(new MenuListener(this), this);
+        getServer().getPluginManager().registerEvents(new PrinterListener(this), this);
 
 
         // Démarrer les tâches périodiques
@@ -156,6 +171,8 @@ public final class CustomSkyblock extends JavaPlugin {
     public WarpManager getWarpManager() {
         return warpManager;
     }
+
+    public PrinterManager getPrinterManager() { return printerManager; }
 
     // HopperTransferManager retiré (Spigot gère les transferts)
 

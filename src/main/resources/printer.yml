@@ -1,0 +1,18 @@
+tiers:
+  1:
+    value: 10
+    upgrade-cost: 100
+  2:
+    value: 20
+    upgrade-cost: 200
+  3:
+    value: 30
+    upgrade-cost: 400
+  4:
+    value: 50
+    upgrade-cost: 800
+  5:
+    value: 75
+    upgrade-cost: 1200
+  # ... à étendre jusqu'à 50 (valeurs par défaut). Vous pourrez les ajuster.
+
