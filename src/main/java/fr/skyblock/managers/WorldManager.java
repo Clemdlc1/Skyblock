@@ -487,12 +487,17 @@ public class WorldManager {
                     }
 
                     if (now - last >= unloadAfterMillis) {
+                        // Retirer tous les nametags d'imprimantes avant déchargement
+                        UUID islandId = getIslandIdFromWorldName(worldName);
+                        if (islandId != null) {
+                            plugin.getPrinterManager().clearNametagsForIsland(islandId, bukkitWorld);
+                        }
                         // Décharger via Multiverse (sauvegarde true)
                         mvWorldManager.getLoadedWorld(bukkitWorld).peek(loaded -> {
                             // Sauvegarder l'île avant de décharger
-                            UUID islandId = getIslandIdFromWorldName(worldName);
-                            if (islandId != null) {
-                                Island island = plugin.getDatabaseManager().loadIsland(islandId);
+                            UUID unloadIslandId = getIslandIdFromWorldName(worldName);
+                            if (unloadIslandId != null) {
+                                Island island = plugin.getDatabaseManager().loadIsland(unloadIslandId);
                                 if (island != null) {
                                     plugin.getDatabaseManager().saveIsland(island);
                                 }

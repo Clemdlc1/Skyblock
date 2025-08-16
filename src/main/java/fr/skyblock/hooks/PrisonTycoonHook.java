@@ -225,7 +225,7 @@ public class PrisonTycoonHook {
      * Par défaut 0; à brancher sur l'API PrisonTycoon quand disponible.
      */
     public int getAdditionalPrinterSlots(UUID playerId) {
-        prisonAPI.getMaxPrinterSlots(playerId);
+        return prisonAPI.getMaxPrinterSlots(playerId);
     }
 
     // === TRANSFERTS ===

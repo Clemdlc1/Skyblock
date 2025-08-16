@@ -182,7 +182,7 @@ public class PrinterManager {
         return paper;
     }
 
-    private void maybeShowNametag(Island island, World world, MoneyPrinter printer) {
+    public void maybeShowNametag(Island island, World world, MoneyPrinter printer) {
         // Montrer un ArmorStand invisible si un joueur est à <=5 blocs
         Location loc = new Location(world, printer.getX() + 0.5, printer.getY() + 1.8, printer.getZ() + 0.5);
         boolean someoneNear = false;
@@ -202,6 +202,11 @@ public class PrinterManager {
                 as.setCustomNameVisible(true);
                 as.setCustomName(ChatColor.GOLD + "Imprimante T" + printer.getTier());
                 tags.put(key, as.getUniqueId());
+            } else {
+                Entity ent = getEntity(world, tags.get(key));
+                if (ent instanceof ArmorStand as) {
+                    as.setCustomName(ChatColor.GOLD + "Imprimante T" + printer.getTier());
+                }
             }
         } else {
             if (tags.containsKey(key)) {
@@ -217,6 +222,28 @@ public class PrinterManager {
             if (e.getUniqueId().equals(uuid)) return e;
         }
         return null;
+    }
+
+    public void removeNametag(UUID islandId, World world, int x, int y, int z) {
+        Map<String, UUID> tags = islandNametags.get(islandId);
+        if (tags == null) return;
+        String key = x + ":" + y + ":" + z;
+        UUID tagId = tags.remove(key);
+        if (tagId != null) {
+            Entity ent = getEntity(world, tagId);
+            if (ent != null) ent.remove();
+        }
+    }
+
+    public void clearNametagsForIsland(UUID islandId, World world) {
+        Map<String, UUID> tags = islandNametags.get(islandId);
+        if (tags == null) return;
+        for (UUID tagId : new ArrayList<>(tags.values())) {
+            Entity ent = getEntity(world, tagId);
+            if (ent != null) ent.remove();
+        }
+        tags.clear();
+        islandNametags.remove(islandId);
     }
 }
 

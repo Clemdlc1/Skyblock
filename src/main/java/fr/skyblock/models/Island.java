@@ -77,7 +77,7 @@ public class Island {
 
         this.maxDepositChests = 1;
         this.billGenerationSpeed = 1;
-        this.maxPrinters = 1;
+        this.maxPrinters = 0;
 
         this.printers = new ArrayList<>();
 

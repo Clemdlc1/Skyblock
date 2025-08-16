@@ -4,9 +4,12 @@ import fr.skyblock.CustomSkyblock;
 import fr.skyblock.managers.MenuManager;
 import fr.skyblock.models.Island;
 import fr.skyblock.models.MoneyPrinter;
+
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 
 public class PrinterUpgradeMenu extends BaseMenu {
@@ -23,7 +26,7 @@ public class PrinterUpgradeMenu extends BaseMenu {
             player.sendMessage(ChatColor.RED + "Aucune imprimante associée.");
             return;
         }
-        Inventory inv = createInventory(9, ChatColor.DARK_AQUA + "Upgrade Imprimante");
+        Inventory inv = Bukkit.createInventory(player, InventoryType.DROPPER, ChatColor.DARK_AQUA + "Upgrade Imprimante");
 
         long nextTier = printer.getTier() + 1L;
         long cost = plugin.getConfig().getLong("printers." + nextTier + ".upgrade-cost", nextTier * 200);
@@ -75,6 +78,7 @@ public class PrinterUpgradeMenu extends BaseMenu {
             printer.setTier((int) nextTier);
             plugin.getDatabaseManager().saveIsland(island);
             player.sendMessage(ChatColor.GREEN + "Imprimante améliorée vers Tier " + nextTier + " !");
+            plugin.getPrinterManager().maybeShowNametag(island, plugin.getIslandManager().getIslandWorld(island), printer);
             open(player);
         }
     }

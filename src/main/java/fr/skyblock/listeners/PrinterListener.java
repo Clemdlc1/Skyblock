@@ -81,7 +81,11 @@ public class PrinterListener implements Listener {
 
         if (!plugin.getPrinterManager().breakPrinter(player, island, block, printer)) {
             event.setCancelled(true);
+            return;
         }
+
+        // Supprimer le nametag associé
+        plugin.getPrinterManager().removeNametag(island.getId(), block.getWorld(), block.getX(), block.getY(), block.getZ());
     }
 
     @EventHandler(priority = EventPriority.NORMAL)
@@ -107,8 +111,8 @@ public class PrinterListener implements Listener {
             plugin.getMenuManager().openPrinterUpgradeMenu(player, printer);
             return;
         }
-
         // Sinon, afficher des infos
+        event.setCancelled(true);
         long value = plugin.getConfig().getLong("printers." + printer.getTier() + ".value", printer.getTier() * 10L);
         player.sendMessage(ChatColor.GOLD + "=== Imprimante ===");
         player.sendMessage(ChatColor.YELLOW + "Tier: " + ChatColor.WHITE + printer.getTier());
