@@ -288,4 +288,12 @@ public class PrisonTycoonHook {
             return String.valueOf(number);
         }
     }
+
+    public boolean isInCombat(Player player) {
+        return prisonAPI.isInCombat(player);
+    }
+
+    public long getRemainingCombatSeconds(Player player) {
+        return prisonAPI.getRemainingCombatSeconds(player);
+    }
 }

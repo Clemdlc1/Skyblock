@@ -165,6 +165,9 @@ public class SchematicManager {
         // Générer l'île avec le schematic
         generateIslandFromSchematic(island, schematic, player);
 
+        if (plugin.getPrisonTycoonHook().isInCombat(player)) {
+            return island;
+        }
         // Téléporter le joueur
         new BukkitRunnable() {
             @Override

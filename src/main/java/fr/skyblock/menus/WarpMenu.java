@@ -330,6 +330,11 @@ public class WarpMenu extends BaseMenu {
             default -> {
                 // Clic sur un warp
                 if (slot >= 10 && slot < 44 && warps != null && !warps.isEmpty()) {
+                    if (plugin.getPrisonTycoonHook().isInCombat(player)) {
+                        long remaining = plugin.getPrisonTycoonHook().getRemainingCombatSeconds(player);
+                        player.sendMessage("§c❌ Impossible de se téléporter en combat! Reste: §e" + remaining + "s");
+                        return;
+                    }
                     int warpIndex = calculateWarpIndex(slot, page);
 
                     if (warpIndex >= 0 && warpIndex < warps.size()) {
@@ -352,8 +357,12 @@ public class WarpMenu extends BaseMenu {
                 // Clic sur un warp
                 List<IslandWarp> warps = (List<IslandWarp>) getMenuData(player, "warps");
                 if (slot >= 10 && slot < 26 && warps != null && !warps.isEmpty()) {
+                    if (plugin.getPrisonTycoonHook().isInCombat(player)) {
+                        long remaining = plugin.getPrisonTycoonHook().getRemainingCombatSeconds(player);
+                        player.sendMessage("§c❌ Impossible de se téléporter en combat! Reste: §e" + remaining + "s");
+                        return;
+                    }
                     int warpIndex = calculatePlayerWarpIndex(slot);
-
                     if (warpIndex >= 0 && warpIndex < warps.size()) {
                         IslandWarp warp = warps.get(warpIndex);
                         player.closeInventory();
@@ -399,6 +408,11 @@ public class WarpMenu extends BaseMenu {
                     plugin.getLogger().info("Clic sur slot " + slot + ", index calculé: " + warpIndex + ", warps disponibles: " + warps.size());
 
                     if (warpIndex >= 0 && warpIndex < warps.size()) {
+                        if (plugin.getPrisonTycoonHook().isInCombat(player)) {
+                            long remaining = plugin.getPrisonTycoonHook().getRemainingCombatSeconds(player);
+                            player.sendMessage("§c❌ Impossible de se téléporter en combat! Reste: §e" + remaining + "s");
+                            return;
+                        }
                         IslandWarp warp = warps.get(warpIndex);
 
                         // Pour l'instant, toujours téléporter (TODO: gérer clic droit pour supprimer)

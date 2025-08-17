@@ -115,6 +115,12 @@ public class IslandCommand implements CommandExecutor, TabCompleter {
     }
 
     private void handleHome(Player player) {
+        if (plugin.getPrisonTycoonHook().isInCombat(player)) {
+            long remaining = plugin.getPrisonTycoonHook().getRemainingCombatSeconds(player);
+            player.sendMessage("§c❌ Impossible de se téléporter en combat! Reste: §e" + remaining + "s");
+            return;
+        }
+
         SkyblockPlayer skyblockPlayer = plugin.getDatabaseManager().loadPlayer(player.getUniqueId());
         if (skyblockPlayer == null || !skyblockPlayer.hasIsland()) {
             player.sendMessage(ChatColor.RED + "Vous n'avez pas d'île ! Utilisez /is create pour en créer une.");
